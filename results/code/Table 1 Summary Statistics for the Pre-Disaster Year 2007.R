@@ -265,16 +265,16 @@ pre_table <- pre_tab_df %>%
 
 writeLines(as.character(pre_table), "./results/analysis/Tab_01_Summary_Statistics_Pre_Disaster.tex")
 
-post_table <- post_tab_df %>%
-  knitr::kable(
-    format    = "latex",
-    booktabs  = TRUE,
-    caption   = "Summary Statistics for the Post-Disaster Year 2008",
-    col.names = c("Variable",
-                  "Mean (Treated)", "SD",
-                  "Mean (Control)", "SD",
-                  "Mean Diff.")
-  ) %>%
-  kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"))
-
-writeLines(as.character(post_table), "./results/analysis/Tab_01_Summary_Statistics_Post_Disaster.tex")
+# post_table <- post_tab_df %>%
+#   knitr::kable(
+#     format    = "latex",
+#     booktabs  = TRUE,
+#     caption   = "Summary Statistics for the Post-Disaster Year 2008",
+#     col.names = c("Variable",
+#                   "Mean (Treated)", "SD",
+#                   "Mean (Control)", "SD",
+#                   "Mean Diff.")
+#   ) %>%
+#   kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"))
+# 
+# writeLines(as.character(post_table), "./results/analysis/Tab_01_Summary_Statistics_Post_Disaster.tex")

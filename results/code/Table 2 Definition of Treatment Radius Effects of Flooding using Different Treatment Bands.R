@@ -242,4 +242,4 @@ tex_lines <- c(
   "\\end{table}%"
 )
 
-writeLines(tex_lines, "Tab_02_Definition_Treatment_Radius.tex")
+writeLines(tex_lines, "./results/analysis/Tab_02_Definition_Treatment_Radius.tex")

@@ -1,0 +1,48 @@
+\begin{supptable}[H]
+  \centering
+  \tabcaption{Establishment-Level Estimates Increasing the Post-Treatment Period}
+  \label{rob5:est}
+  \scalebox{0.70}{
+ \begin{threeparttable}
+    \begin{tabular}{lccccccc}
+    \toprule
+          & (1)   &       & (2)   &       & (3)   &       & (4) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
+    \multicolumn{8}{l}{\textbf{Panel A: Time-Agregatted DiD}}\\
+    Dep. Var: & Closure & & Closure & & Relocation (Tract, t-1) & & Relocation (Tract, t-1) \\
+    \midrule
+    Flash Flood Post & 0.00841*** &       & 0.01261*** &       & -0.00384** &       & -0.00234\\
+                      & (0.00167) &       & (0.00257) &       & (0.00170) &       & (0.00188)\\
+    Observations & 554{,}055 &       & 554{,}055 &       & 554{,}055 &       & 554{,}055\\
+    Census Tract Trend & No &       & Yes &       & No &       & Yes\\
+    \midrule
+    \multicolumn{8}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+    Dep. Var: & Closure & & Closure & & Relocation & & Relocation \\
+    \midrule
+    Flash Flood 2008 & 0.00504** &       & 0.00923*** &       & -0.00429** &       & -0.00272\\
+                      & (0.00200) &       & (0.00262) &       & (0.00174) &       & (0.00198)\\
+    Flash Flood 2009 & 0.00426 &       & 0.00846** &       & -0.00437** &       & -0.00283\\
+                      & (0.00257) &       & (0.00361) &       & (0.00181) &       & (0.00202)\\
+    Flash Flood 2010 & 0.00599* &       & 0.01019** &       & -0.00507** &       & -0.00358\\
+                      & (0.00326) &       & (0.00436) &       & (0.00179) &       & (0.00203)\\
+    Flash Flood 2011 & 0.00999** &       & 0.01418*** &       & -0.00224 &       & -0.00074\\
+                      & (0.00356) &       & (0.00456) &       & (0.00189) &       & (0.00210)\\
+    Flash Flood 2012 & 0.00973** &       & 0.01392*** &       & -0.00476** &       & -0.00328\\
+                      & (0.00360) &       & (0.00440) &       & (0.00183) &       & (0.00217)\\
+    Flash Flood 2013 & 0.00720* &       & 0.01139** &       & -0.00191 &       & -0.00045\\
+                      & (0.00359) &       & (0.00432) &       & (0.00179) &       & (0.00208)\\
+    Flash Flood 2014 & 0.00941** &       & 0.01360** &       & -0.00455** &       & -0.00309\\
+                      & (0.00389) &       & (0.00455) &       & (0.00182) &       & (0.00208)\\
+    Flash Flood 2015 & 0.01604*** &       & 0.02024*** &       & 0.00037 &       & 0.00181\\
+                      & (0.00398) &       & (0.00469) &       & (0.00174) &       & (0.00206)\\
+    Flash Flood 2016 & 0.01563*** &       & 0.01982*** &       & -0.00703*** &       & -0.00559**\\
+                      & (0.00387) &       & (0.00459) &       & (0.00148) &       & (0.00186)\\
+    Observations & 554{,}055 &       & 554{,}055 &       & 554{,}055 &       & 554{,}055\\
+    Census Tract Trend & No &       & Yes &       & No &       & Yes\\
+    \bottomrule
+    \end{tabular}%
+   	\begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table extends the post-treatment period through 2016 relative to the baseline specification. Closure is measured by \textit{morte}. Relocation is defined as \textit{Census Tract, t-1}: $reloc\_tract\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \texttt{code\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\_tract\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy; Panel B uses time-varying treatment dummies (2008--2016). The treatment radius ranges from 0 to 12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. The census tract trend is included in columns (2) and (4). Two-way clustered-robust standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+   	\end{tablenotes}
+   	\end{threeparttable}
+   	}
+\end{supptable}%

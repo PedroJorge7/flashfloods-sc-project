@@ -1,0 +1,38 @@
+\begin{table}[htb!]
+  \centering
+  \tabcaption{The Effect of the Flash Floods on Establishment Closure by Business Size}
+  \label{tab5: hetero_size}
+  \scalebox{0.75}{
+ \begin{threeparttable}
+    \begin{tabular}{lccccc}
+  \toprule
+ & (1)   &       & (2)   &       & (3) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}
+\multicolumn{6}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+Est. Size: & Micro Business &       & Small Business &       & Medium \& Large Business \\
+\midrule
+    Flash Flood Post & 0.01963*** &  & 0.00139 &  & 0.01253 \\
+                     & (0.00308) &  & (0.00378) &  & (0.01207) \\
+    Observations & 287{,}378 &  & 68{,}187 &  & 11{,}837 \\
+\midrule
+\multicolumn{6}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+Est. Size: & Micro Business &       & Small Business &       & Medium \& Large Business \\
+\midrule
+    Flash Flood 2008 & 0.01580*** &  & -0.00163 &  & -0.00297 \\
+                     & (0.00335) &  & (0.00318) &  & (0.00671) \\
+    Flash Flood 2009 & 0.01686*** &  & -0.00074 &  & 0.00026 \\
+                     & (0.00452) &  & (0.00319) &  & (0.00738) \\
+    Flash Flood 2010 & 0.01776*** &  & 0.00631 &  & 0.02287** \\
+                     & (0.00521) &  & (0.00348) &  & (0.00861) \\
+    Flash Flood 2011 & 0.02403*** &  & 0.00795* &  & 0.02324* \\
+                     & (0.00533) &  & (0.00390) &  & (0.01219) \\
+    Flash Flood 2012 & 0.02748*** &  & -0.00377 &  & 0.02635* \\
+                     & (0.00465) &  & (0.00428) &  & (0.01394) \\
+    Observations & 287{,}378 &  & 68{,}187 &  & 11{,}837 \\
+    \bottomrule
+    \end{tabular}%
+   \begin{tablenotes}[flushleft] \item \small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by business size. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects, year fixed effects, and census tract trend are included in all estimations. Two-way clustered-robust standard errors at the establishment and year level are in parentheses. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.
+   \end{tablenotes}
+   \end{threeparttable}
+   }
+\end{table}%

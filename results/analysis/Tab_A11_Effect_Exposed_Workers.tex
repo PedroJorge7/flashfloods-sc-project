@@ -1,0 +1,41 @@
+\begin{supptable}[H]
+  \centering
+  \tabcaption{The Effect of the Flash Floods on Exposed Workers} \label{robA11:exposed_workers}
+  \scalebox{0.75}{
+ \begin{threeparttable}
+    \begin{tabular}{lccccccc}
+    \toprule
+          & (1)   &       & (2)   &       & (3)   &       & (4) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
+  \multicolumn{8}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+ Dep. Var:   & Employment &       & Employment &       & log Wage &       & log Wage \\
+    \midrule
+    Flash Flood Post & 0.00217 & & 0.00221 & & 0.04080*** & & 0.04084*** \\
+                    & (0.00371) & & (0.00372) & & (0.00371) & & (0.00372) \\
+    Observations            & 1769076 & & 1769076 & & 1586768 & & 1586768 \\
+    Census Tract Trend      & No          & & Yes         & & No         & & Yes \\
+  \midrule
+  \multicolumn{8}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+ Dep. Var:   & Employment &       & Employment &       & log Wage &       & log Wage \\
+    \midrule
+    Flash Flood 2008 & 0.00218 & & 0.00218 & & 0.03053*** & & 0.03053*** \\
+                    & (0.00229) & & (0.00229) & & (0.00229) & & (0.00229) \\
+    Flash Flood 2009 & -0.00228 & & -0.00224 & & 0.04332*** & & 0.04337*** \\
+                    & (0.00213) & & (0.00211) & & (0.00213) & & (0.00211) \\
+    Flash Flood 2010 & 0.00680** & & 0.00684** & & 0.04435*** & & 0.04439*** \\
+                    & (0.00230) & & (0.00229) & & (0.00230) & & (0.00229) \\
+    Flash Flood 2011 & 0.00030 & & 0.00033 & & 0.05099*** & & 0.05103*** \\
+                    & (0.00237) & & (0.00236) & & (0.00237) & & (0.00236) \\
+    Flash Flood 2012 & 0.00600** & & 0.00604** & & 0.04978*** & & 0.04982*** \\
+                    & (0.00228) & & (0.00228) & & (0.00228) & & (0.00228) \\
+    \midrule
+    Observations            & 1769076 & & 1769076 & & 1586768 & & 1586768 \\
+    Census Tract Trend      & No          & & Yes         & & No         & & Yes \\
+    \bottomrule
+    \end{tabular}%
+    \begin{tablenotes}[flushleft]
+    \item \small \textit{Notes:} This table reports worker-level difference-in-differences estimates for exposed workers (treatment area universe with matching). The outcomes are employment (columns (1) and (2)) and log wage (columns (3) and (4)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008–2012), with 2007 as the omitted year. Worker and year fixed effects are included in all specifications. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.
+    \end{tablenotes}
+ \end{threeparttable}
+ }
+\end{supptable}%

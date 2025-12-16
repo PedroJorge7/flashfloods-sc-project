@@ -1,0 +1,38 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{Definition of Treatment Radius: Effects of Flooding using Different Treatment Bands}
+    \label{tab: def_treat}
+    \scalebox{0.7}{
+ \begin{threeparttable}
+    \begin{tabular}{lccccccccccccccc}
+\toprule
+          & (1) &  & (2) &  & (3) &  & (4) &  & (5) &  & (6) &  & (7) &  \\
+\cmidrule{2-2}\cmidrule{4-4}\cmidrule{6-6}\cmidrule{8-8}\cmidrule{10-10}\cmidrule{12-12}\cmidrule{14-14}
+  Dep. Var: & Closure &  & Closure &  & Closure &  & Closure &  & Closure &  & Closure &  & Closure &  \\
+\cmidrule{2-2}\cmidrule{4-4}\cmidrule{6-6}\cmidrule{8-8}\cmidrule{10-10}\cmidrule{12-12}\cmidrule{14-14}
+Treatment Group & 0–2.5 km &  & 2.5–5 km &  & 5–7.5 km &  & 7.5–10 km &  & 10–12.5 km &  & 12.5–15 km &  & 15–17.5 km &  \\
+Control Group & 50–80 km &  & 50–80 km &  & 50–80 km &  & 50–80 km &  & 50–80 km &  & 50–80 km &  & 50–80 km &  \\
+\midrule
+Flash Flood 2008 & 0.00773* &  & 0.00648* &  & -0.00454 &  & 0.02252*** &  & -0.02585*** &  & -0.01228 &  & 0.00397 &  \\
+       & (0.00366) &  & (0.00307) &  & (0.00353) &  & (0.00632) &  & (0.00534) &  & (0.01012) &  & (0.00800) &  \\
+Flash Flood 2009 & 0.01081* &  & 0.00787* &  & -0.00657 &  & 0.00572 &  & 0.00621 &  & -0.02623** &  & -0.00338 &  \\
+       & (0.00485) &  & (0.00372) &  & (0.00416) &  & (0.00599) &  & (0.00920) &  & (0.01109) &  & (0.00670) &  \\
+Flash Flood 2010 & 0.01354** &  & 0.00406 &  & 0.00324 &  & 0.01696** &  & 0.02990** &  & -0.02083* &  & -0.00875 &  \\
+       & (0.00597) &  & (0.00389) &  & (0.00385) &  & (0.00715) &  & (0.01208) &  & (0.00937) &  & (0.00634) &  \\
+Flash Flood 2011 & 0.01553** &  & 0.01360*** &  & 0.01440*** &  & 0.01162 &  & 0.02655* &  & -0.02505** &  & -0.00761 &  \\
+       & (0.00616) &  & (0.00402) &  & (0.00433) &  & (0.00781) &  & (0.01408) &  & (0.01079) &  & (0.00701) &  \\
+Flash Flood 2012 & 0.02326*** &  & 0.02007*** &  & -0.00244 &  & 0.01052 &  & 0.01470 &  & -0.03037** &  & -0.00627 &  \\
+       & (0.00572) &  & (0.00387) &  & (0.00521) &  & (0.00728) &  & (0.01261) &  & (0.01029) &  & (0.00699) &  \\
+\midrule
+Observations & 257,926 &  & 257,077 &  & 225,063 &  & 207,208 &  & 201,868 &  & 198,397 &  & 202,464 &  \\
+Establishment FE & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  \\
+Year FE & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  & Yes &  \\
+Census trend & No &  & No &  & No &  & No &  & No &  & No &  & No &  \\
+
+\bottomrule
+    \end{tabular}%
+        \begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table shows the estimation of equation (\ref{eq.eq1}) using business closure as the outcome variable. Treatment groups vary by distance bands (second row) while the control ring is fixed at 50--80 km from flood spots. Treatment assignment over time follows the Stata forward-fill logic, but the movement indicator is defined as \texttt{reloc\_tract\_tminus1}, constructed from changes in census tract (\texttt{code\_tract}) between $t$ and $t+1$ (lead of the tract-change indicator), including the adjustment that forces \texttt{reloc\_tract\_tminus1}=0 if it equals 1 in the first observed year of the establishment. Robust standard errors clustered at the establishment and year level are shown in parentheses. *** p $<$ 0.01, ** p $<$ 0.05, * p $<$ 0.1.
+        \end{tablenotes}
+        \end{threeparttable}
+        }
+\end{table}%

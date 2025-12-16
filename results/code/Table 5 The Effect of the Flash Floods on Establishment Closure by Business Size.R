@@ -305,4 +305,4 @@ latex_lines <- c(
 
 
 writeLines(latex_lines,
-           "establishments/analysis/Tab_05_Effect_by_Business_Size.tex")
+           "results/analysis/Tab_05_Effect_by_Business_Size.tex")

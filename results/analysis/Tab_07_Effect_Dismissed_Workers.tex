@@ -1,0 +1,42 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{The Effect of Disaster-induced Closures on the Dismissed Workers}
+  \label{tab:workers_results}
+  \scalebox{0.75}{
+ \begin{threeparttable}
+    \begin{tabular}{l c p{0.60cm} c p{0.25cm} c p{0.25cm} c}
+    \toprule
+          & (1)   &       & (2)   &       & (3)   &       & (4) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
+  \multicolumn{8}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+ Dep. Var:   & Employment &       & Employment &       & log Wage &       & log Wage \\
+    \midrule
+    Flash Flood Post & -0.12291*** & & -0.12382*** & & 0.05004*** & & 0.04984*** \\
+                    & (0.01157) & & (0.01153) & & (0.01157) & & (0.01153) \\
+    Observations            & 62541 & & 62541 & & 54087 & & 54087 \\
+    Census Tract Trend      & No          & & Yes         & & No         & & Yes \\
+  \midrule
+  \multicolumn{8}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+ Dep. Var:   & Employment &       & Employment &       & log Wage &       & log Wage \\
+    \midrule
+    Flash Flood 2008 & -0.00006 & & -0.00005 & & 0.00991** & & 0.00998** \\
+                    & (0.00967) & & (0.00966) & & (0.00967) & & (0.00966) \\
+    Flash Flood 2009 & -0.22315*** & & -0.22405*** & & 0.05394*** & & 0.05371*** \\
+                    & (0.01308) & & (0.01305) & & (0.01308) & & (0.01305) \\
+    Flash Flood 2010 & -0.09365*** & & -0.09453*** & & 0.03537*** & & 0.03520*** \\
+                    & (0.01272) & & (0.01267) & & (0.01272) & & (0.01267) \\
+    Flash Flood 2011 & -0.09405*** & & -0.09494*** & & 0.06307*** & & 0.06291*** \\
+                    & (0.01176) & & (0.01173) & & (0.01176) & & (0.01173) \\
+    Flash Flood 2012 & -0.06727*** & & -0.06819*** & & 0.05747*** & & 0.05728*** \\
+                    & (0.01030) & & (0.01026) & & (0.01030) & & (0.01026) \\
+    \midrule
+    Observations            & 62541 & & 62541 & & 54087 & & 54087 \\
+    Census Tract Trend      & No          & & Yes         & & No         & & Yes \\
+    \bottomrule
+    \end{tabular}%
+    \begin{tablenotes}[flushleft]
+    \item \small This table shows estimates from a difference-in-differences model for employment (columns (1) and (2)) and log wage (columns (3) and (4)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. The sample is constructed from dismissed workers under the restrictions \texttt{emprego\_06\_07 = 1} and \texttt{mesma\_empresa\_06\_07 = TRUE}. Worker fixed effects and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \end{tablenotes}
+    \end{threeparttable}
+    }
+\end{table}

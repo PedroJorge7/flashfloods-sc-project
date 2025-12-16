@@ -1,73 +1,132 @@
-# ============================================================================
-# Figure 9: Alternative Sizes of Treatment Radius - Worker Level
-# ============================================================================
-
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(cowplot)
-library(haven)
+############################################################
+## Robustez 2 – Mudanças no Raio de Tratamento (Workers)
+## Tratamentos: 2.5 7.5 17.5 22.5 30 (control fixo 50–80)
+## Saída: ./results/analysis/change_treatment_empregados.png
+## AJUSTES:
+##  - Cores padrão (paleta nomeada pelos níveis do radius)
+##  - Painéis em apenas 1 linha (ggarrange nrow = 1)
+############################################################
 
 rm(list = ls())
 
-# ============================================================================
-# Load results for alternative treatment radius (worker level)
-# ============================================================================
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(MatchIt)
 
-treatment_radii <- c("2.5", "7.5", "17.5", "22.5", "30")
+OUT_DIR <- "./results/analysis"
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-# Load all results
-all_results <- data.frame()
+source("./results/code/Aux.R")
 
-for (radius in treatment_radii) {
-  filename <- paste0("workers_agg_radius_", radius, ".dta")
-  
-  tryCatch({
-    result <- haven::read_dta(filename) %>%
-      mutate(
-        outcome = "Dismissed Workers",
-        treatment_radius = as.numeric(radius)
-      )
-    all_results <- bind_rows(all_results, result)
-  }, error = function(e) {
-    cat("File not found:", filename, "\n")
-  })
-}
-
-# ============================================================================
-# Create visualization
-# ============================================================================
-
-plot <- ggplot(all_results, aes(x = treatment_radius, y = estimate)) +
-  geom_point(size = 3, color = "darkblue") +
-  geom_line(linetype = "solid", color = "darkblue") +
-  geom_ribbon(
-    aes(ymin = min95, ymax = max95),
-    alpha = 0.2,
-    fill = "lightblue"
-  ) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", alpha = 0.5) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  labs(
-    title = "Alternative Sizes of the Treatment Radius in Worker-Level Estimations",
-    x = "Treatment Radius (km)",
-    y = "Coefficient (95% CI)"
-  )
-
-# ============================================================================
-# Save plot
-# ============================================================================
-
-ggsave(
-  "Fig_09_Alternative_Treatment_Radius_Workers.png",
-  plot,
-  dpi = 300,
-  width = 10,
-  height = 6,
-  units = "in"
+# ---------------------------------------------------------
+# Paleta padrão (NOMES = níveis do radius)
+# ---------------------------------------------------------
+treat_colors <- c(
+  "0-2.5 km"  = "#FEE0D2",
+  "0-7.5 km"  = "#FCBBA1",
+  "0-17.5 km" = "#FB6A4A",
+  "0-22.5 km" = "#EF3B2C",
+  "0-30 km"   = "#CB181D"
 )
 
-cat("Figure 9 saved: Fig_09_Alternative_Treatment_Radius_Workers.png\n")
+# ---------------------------------------------------------
+# Dados + filtros
+# ---------------------------------------------------------
+dados <- readRDS("./data/workers_clean_data.rds") %>%
+  filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
+  filter(between(year, 2002, 2012))
+
+# ---------------------------------------------------------
+# Helper: garante tipos numéricos (evita plot “sumir”)
+# ---------------------------------------------------------
+clean_output_for_plot <- function(df) {
+  df %>%
+    mutate(
+      parmseq  = trimws(as.character(parmseq)),
+      estimate = as.numeric(estimate),
+      min      = as.numeric(min),
+      max      = as.numeric(max),
+      radius   = trimws(as.character(radius))
+    ) %>%
+    filter(is.finite(estimate), is.finite(min), is.finite(max))
+}
+
+# ---------------------------------------------------------
+# Rodar outputs por raio de TRATAMENTO (control fixo 50–80)
+# ---------------------------------------------------------
+output_empregados_2_5  <- output_empregados(dados, 0,  2.5, 50, 80, trend = TRUE)
+output_empregados_7_5  <- output_empregados(dados, 0,  7.5, 50, 80, trend = TRUE)
+output_empregados_17_5 <- output_empregados(dados, 0, 17.5, 50, 80, trend = TRUE)
+output_empregados_22_5 <- output_empregados(dados, 0, 22.5, 50, 80, trend = TRUE)
+output_empregados_30   <- output_empregados(dados, 0, 30.0, 50, 80, trend = TRUE)
+
+output <- bind_rows(
+  output_empregados_2_5,
+  output_empregados_7_5,
+  output_empregados_17_5,
+  output_empregados_22_5,
+  output_empregados_30
+) %>%
+  filter(type == "type_treatment") %>%
+  mutate(
+    parmseq = gsub("^Flash Flood\\s+", "", as.character(parmseq)),
+    radius  = paste0(treat, " km"),
+    radius  = factor(radius, levels = c("0-2.5 km","0-7.5 km","0-17.5 km","0-22.5 km","0-30 km"))
+  ) %>%
+  clean_output_for_plot() %>%
+  arrange(parmseq, radius)
+
+if (nrow(output) == 0) stop("Robustez 2: `output` ficou vazio depois dos filtros/conversões.")
+
+# ---------------------------------------------------------
+# Plot (comparando raios no MESMO painel, com cores padrão)
+# ---------------------------------------------------------
+plot_one <- function(reg) {
+  dd <- output %>% filter(Regression == reg)
+  
+  ggplot(dd, aes(y = parmseq, x = estimate, color = radius)) +
+    geom_pointrange(
+      aes(xmax = max, xmin = min),
+      size = 0.5,
+      position = position_dodge(width = 0.7)
+    ) +
+    geom_vline(xintercept = 0, linetype = "dashed") +
+    scale_y_discrete(limits = c("Post","2008","2009","2010","2011","2012")) +
+    scale_color_manual(values = treat_colors, drop = FALSE) +
+    coord_flip() +
+    labs(x = "Coefficient", y = "Year", title = reg, color = "Treatment Radius") +
+    theme_bw() +
+    theme(legend.position = "bottom")
+}
+
+reg_names <- unique(output$Regression)
+
+# se tiver emp/wage, foca neles (senão plota tudo que existir)
+keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
+if (length(keep) > 0) reg_names <- keep
+
+plots_list <- lapply(reg_names, plot_one)
+
+# ---------------------------------------------------------
+# AJUSTE: montar em apenas 1 linha
+# ---------------------------------------------------------
+nplots <- length(plots_list)
+fig <- ggpubr::ggarrange(
+  plotlist      = plots_list,
+  nrow          = 1,
+  ncol          = nplots,
+  common.legend = TRUE,
+  legend        = "bottom"
+)
+
+print(fig)
+
+ggsave(
+  filename = file.path(OUT_DIR, "change_treatment_empregados.png"),
+  plot     = fig,
+  dpi      = 500,
+  width    = 30,
+  height   = 15,
+  units    = "cm"
+)

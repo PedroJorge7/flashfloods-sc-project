@@ -1,5 +1,10 @@
 # ============================================================================
 # Figure 7: Alternative Inference Procedures – Establishment Level (R version)
+# NOVA DEFINIÇÃO: Relocation = Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
+# - inclui lead()
+# - inclui correção do 1º ano do id_estab
+# - inclui regra: se morte é NA => relocation NA
+# - FE tendência: treat_trend_f[code_tract_num]  (ordem correta no fixest)
 # ============================================================================
 
 rm(list = ls())
@@ -13,23 +18,30 @@ library(broom)
 library(ggpubr)
 
 # ---------------------------------------------------------
+# 0) Output dir
+# ---------------------------------------------------------
+dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
+
+# ---------------------------------------------------------
 # 1) Carregar base correta (com coordenadas)
 # ---------------------------------------------------------
-
 data <- haven::read_dta("./data/firm_coordinates.dta") %>%
   mutate(
-    # garantir nomes lat/lon que o fixest reconhece
     lat = Lat,
     lon = Lon
   ) %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
-# ---------------------------------------------------------
-# 2) Garantir estrutura de tratamento (igual tabela/figuras anteriores)
-#    (se já estiver na base, isso só sobrescreve de forma consistente)
-# ---------------------------------------------------------
+stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract","lat","lon") %in% names(data)))
 
+# se tiver coordenadas faltando, Conley pode falhar -> corta
+data <- data %>%
+  filter(!is.na(lat), !is.na(lon))
+
+# ---------------------------------------------------------
+# 2) Tratamento (igual Table 3 / Stata) + variáveis base
+# ---------------------------------------------------------
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
@@ -40,20 +52,23 @@ data <- data %>%
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
+    # guardar originais
     morte_orig         = morte,
-    new_firm_orig      = new_firm,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
-  # outcomes = NA onde treat_B é missing
   mutate(
-    morte    = if_else(is.na(treat_B), NA_real_, morte),
-    new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
+    # garantir numérico (evita haven_labelled)
+    morte         = as.numeric(haven::zap_labels(morte)),
+    mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
+    mover_raw     = mover_ano_mun,  # usado no forward fill do treat_B (como Stata)
+    # outcomes = NA onde treat_B é missing
+    morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
-  # forward fill de treat_B usando relocação
+  # forward fill do treat_B usando mover_ano_mun "bruto" (como Stata)
   mutate(
     treat_B = {
       tb  <- treat_B
-      mov <- mover_ano_mun
+      mov <- mover_raw
       for (i in seq_along(tb)) {
         if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
           tb[i] <- tb[i - 1]
@@ -62,16 +77,66 @@ data <- data %>%
       tb
     }
   ) %>%
-  # relocação = NA onde treat_B segue NA
+  # mover_ano_mun = NA onde treat_B segue NA (como Stata)
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
+  ungroup()
+
+# ---------------------------------------------------------
+# 2.1) NOVA relocation: Census Tract, t-1 (via code_tract)
+#      reloc_tract_tminus1(t) = lead( 1[ct(t) != ct(t-1)], 1 )
+#      + seu ajuste obrigatório no 1º ano do id_estab
+#      + regra alinhada: se morte NA => relocation NA
+# ---------------------------------------------------------
+data <- data %>%
+  group_by(id_estab) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(
+    ct     = as.character(code_tract),
+    ct_lag = dplyr::lag(ct, 1),
+    diff_tract = dplyr::case_when(
+      is.na(ct) | is.na(ct_lag) ~ NA_real_,
+      ct != ct_lag              ~ 1,
+      TRUE                      ~ 0
+    ),
+    reloc_tract_tminus1 = dplyr::lead(diff_tract, 1)
+  ) %>%
+  ungroup() %>%
+  select(-ct, -ct_lag, -diff_tract)
+
+# aplica corte por treat_B (igual teu padrão) + correção 1º ano + regra morte->NA
+data <- data %>%
+  mutate(
+    reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, as.numeric(reloc_tract_tminus1))
+  ) %>%
+  group_by(id_estab) %>%
+  mutate(
+    reloc_tract_tminus1 = ifelse(
+      year == min(year, na.rm = TRUE) & reloc_tract_tminus1 == 1,
+      0,
+      reloc_tract_tminus1
+    )
+  ) %>%
   ungroup() %>%
   mutate(
-    treat_trend = if_else(year >= 2008, 1, 0)
+    reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1),0,reloc_tract_tminus1),
+    reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1),
   )
 
-# dummies anuais 2008–2012 (se já existirem, serão refeitas de forma idêntica)
+# ---------------------------------------------------------
+# 2.2) Trend FE (ordem correta no fixest): treat_trend_f[code_tract_num]
+# ---------------------------------------------------------
+data <- data %>%
+  mutate(
+    treat_trend    = if_else(year >= 2008, 1, 0),
+    treat_trend_f  = factor(treat_trend),
+    code_tract_num = suppressWarnings(as.numeric(as.character(code_tract)))
+  )
+
+# ---------------------------------------------------------
+# 2.3) Dummies anuais 2008–2012 + dummy agregada pós-choque
+# ---------------------------------------------------------
 for (y in 2008:2012) {
   var <- paste0("treat_B_", y)
   data[[var]] <- dplyr::case_when(
@@ -81,7 +146,6 @@ for (y in 2008:2012) {
   )
 }
 
-# dummy agregada pós-choque
 data <- data %>%
   mutate(
     treat_B_agg = case_when(
@@ -94,9 +158,7 @@ data <- data %>%
 # ---------------------------------------------------------
 # 3) Especificações de inferência
 # ---------------------------------------------------------
-
-# Só dois outcomes
-outcomes <- c("morte", "mover_ano_mun")
+outcomes <- c("morte", "reloc_tract_tminus1")
 
 inference_specs <- list(
   "Code tract"      = list(type = "cluster", cluster = ~ code_tract),
@@ -107,8 +169,8 @@ inference_specs <- list(
 
 # ---------------------------------------------------------
 # 4) Rodar regressões (Post + dummies anuais) para cada inferência
+#    FE: id_estab + year + treat_trend_f[code_tract_num]
 # ---------------------------------------------------------
-
 all_results <- data.frame()
 
 for (inf_name in names(inference_specs)) {
@@ -120,7 +182,7 @@ for (inf_name in names(inference_specs)) {
     # ---------- (a) Efeito agregado: Post ----------
     fml_agg <- as.formula(
       paste0(outcome,
-             " ~ treat_B_agg | id_estab + year + treat_trend[code_tract]")
+             " ~ treat_B_agg | id_estab + year + treat_trend_f[code_tract_num]")
     )
     
     if (spec$type == "cluster") {
@@ -130,7 +192,7 @@ for (inf_name in names(inference_specs)) {
         cluster = spec$cluster,
         lean    = TRUE
       )
-    } else if (spec$type == "conley") {
+    } else {
       m_agg <- feols(
         fml_agg,
         data = data,
@@ -156,7 +218,7 @@ for (inf_name in names(inference_specs)) {
     fml_evt <- as.formula(
       paste0(outcome, " ~ ",
              paste(treat_vars, collapse = " + "),
-             " | id_estab + year + treat_trend[code_tract]")
+             " | id_estab + year + treat_trend_f[code_tract_num]")
     )
     
     if (spec$type == "cluster") {
@@ -166,7 +228,7 @@ for (inf_name in names(inference_specs)) {
         cluster = spec$cluster,
         lean    = TRUE
       )
-    } else if (spec$type == "conley") {
+    } else {
       m_evt <- feols(
         fml_evt,
         data = data,
@@ -177,9 +239,7 @@ for (inf_name in names(inference_specs)) {
     
     evt_rows <- broom::tidy(m_evt) %>%
       dplyr::filter(grepl("^treat_B_", term)) %>%
-      mutate(
-        Period = gsub("treat_B_", "", term)
-      ) %>%
+      mutate(Period = gsub("treat_B_", "", term)) %>%
       transmute(
         Inference   = inf_name,
         Outcome     = outcome,
@@ -197,19 +257,21 @@ for (inf_name in names(inference_specs)) {
 # ---------------------------------------------------------
 # 5) Preparar dados e painéis A/B
 # ---------------------------------------------------------
-
 all_results <- all_results %>%
   mutate(
-    Outcome      = factor(Outcome,
-                          levels = c("morte", "mover_ano_mun"),
-                          labels = c("Closure", "Relocation")),
-    Period       = factor(Period,
-                          levels = c("Post", "2008", "2009", "2010", "2011", "2012")),
-    Inference    = factor(Inference,
-                          levels = c("Code tract",
-                                     "Conley: 10 km",
-                                     "Conley: 15 km",
-                                     "Conley: 20 km"))
+    Outcome = factor(
+      Outcome,
+      levels = c("morte", "reloc_tract_tminus1"),
+      labels = c("Closure", "Relocation (Census Tract, t-1)")
+    ),
+    Period = factor(
+      Period,
+      levels = c("Post", "2008", "2009", "2010", "2011", "2012")
+    ),
+    Inference = factor(
+      Inference,
+      levels = c("Code tract", "Conley: 10 km", "Conley: 15 km", "Conley: 20 km")
+    )
   )
 
 inf_colors <- c(
@@ -246,14 +308,13 @@ pA <- make_panel(
 )
 
 pB <- make_panel(
-  df = dplyr::filter(all_results, Outcome == "Relocation"),
-  title_label = "B - Establishment Relocation (0/1)"
+  df = dplyr::filter(all_results, Outcome == "Relocation (Census Tract, t-1)"),
+  title_label = "B - Establishment Relocation"
 )
 
 # ---------------------------------------------------------
 # 6) Figura final com legenda única embaixo
 # ---------------------------------------------------------
-
 fig_inf <- ggpubr::ggarrange(
   pA, pB,
   ncol          = 2,
@@ -262,15 +323,13 @@ fig_inf <- ggpubr::ggarrange(
 )
 
 # ---------------------------------------------------------
-# 7) Salvar figura e coeficientes
+# 7) Salvar figura
 # ---------------------------------------------------------
-
 ggsave(
-  filename = "establishments/analysis/Fig_07_Alternative_Inference_Procedures.png",
+  filename = "./results/analysis/change_standard_deviation.png",
   plot     = fig_inf,
   dpi      = 300,
   width    = 12,
   height   = 6,
   units    = "in"
 )
-

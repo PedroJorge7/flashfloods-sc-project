@@ -1,7 +1,13 @@
 ############################################################
-## Appendix – Table B.2
-## Establishment-Level Estimates Including Control Variables
-## (R version)
+## Robustez 4 – Table B.2 (Establishments) com CONTROLES
+## - Replica Table 3 (mesma construção de variáveis e janela)
+## - ONLY: morte e reloc_tract_tminus1 (SEM entry)
+## - Adiciona controles: i(year, X2, ref=2007)
+##   X2 = baseline por id_estab (2007; senão último <=2007; senão 0)
+## - Controles NÃO podem mudar nobs (STOP se mudar)
+## - Cluster 2-way: id_estab + year
+## - Salva:
+##   ./results/analysis/Table_B2_Establishment_Level_Estimates_Including_Control_Variables.tex
 ############################################################
 
 rm(list = ls())
@@ -10,78 +16,112 @@ library(dplyr)
 library(haven)
 library(fixest)
 library(broom)
-library(stringr)
 
 # ---------------------------------------------------------
-# 1) Carregar base (painel completo, sem cortar ano ainda)
+# 0) Output
 # ---------------------------------------------------------
+OUT_DIR <- "./results/analysis"
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+OUTFILE <- file.path(
+  OUT_DIR,
+  "Table_B2_Establishment_Level_Estimates_Including_Control_Variables.tex"
+)
+
+# ---------------------------------------------------------
+# 1) Load data (NÃO corta antes de construir t-1)
+# ---------------------------------------------------------
 data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+  filter(year >= 2003) %>%
   arrange(id_estab, year)
 
-# ---------------------------------------------------------
-# 2) Replicar construção de tratamento do Stata
-# ---------------------------------------------------------
-# Stata:
-# drop treat_*
-# gen treat_B = 1 if dist_flood <= 12.5
-# replace treat_B = 0 if inrange(dist_flood,50,80) & treat_B == .
-# gen morte_orig = morte
-# gen new_firm_orig = new_firm
-# gen mover_ano_mun_orig = mover_ano_mun
-# replace morte = .  if treat_B == .
-# replace new_firm = .  if treat_B == .
-# bysort id_estab (year): replace treat_B = treat_B[_n-1] if treat_B == . & mover_ano_mun == 1
-# replace mover_ano_mun = .  if treat_B == .
+need <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract")
+miss <- setdiff(need, names(data))
+if (length(miss) > 0) stop("Faltam colunas na base: ", paste(miss, collapse = ", "))
 
+# ---------------------------------------------------------
+# 2) Replicar Table 3: tratamento + forward fill (Stata)
+# ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
+  arrange(year, .by_group = TRUE) %>%
   mutate(
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    morte_orig         = morte,
-    new_firm_orig      = new_firm,
-    mover_ano_mun_orig = mover_ano_mun
+    morte         = as.numeric(haven::zap_labels(morte)),
+    mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
+    morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
-  # outcomes ficam NA onde treat_B é missing
-  mutate(
-    morte    = if_else(is.na(treat_B), NA_real_, morte),
-    new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
-  ) %>%
-  # imputação de treat_B dentro do estabelecimento se mover_ano_mun == 1
   mutate(
     treat_B = {
       tb  <- treat_B
       mov <- mover_ano_mun
       for (i in seq_along(tb)) {
-        if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
-          tb[i] <- tb[i - 1]
-        }
+        if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) tb[i] <- tb[i - 1]
       }
       tb
     }
   ) %>%
-  # mover_ano_mun também vira NA onde treat_B é missing
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
-if ("mover_ano_tract" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_tract = if_else(is.na(treat_B), NA_real_, mover_ano_tract))
-}
-if ("mover_ano_cep" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
-}
+# ---------------------------------------------------------
+# 2.1) Relocation = Census Tract, t-1 (igual Table 3)
+# ---------------------------------------------------------
+data <- data %>%
+  group_by(id_estab) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(
+    ct     = as.character(code_tract),
+    ct_lag = lag(ct, 1),
+    diff_tract = case_when(
+      is.na(ct) | is.na(ct_lag) ~ NA_real_,
+      ct != ct_lag              ~ 1,
+      TRUE                      ~ 0
+    ),
+    reloc_tract_tminus1 = lead(diff_tract, 1)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, reloc_tract_tminus1),
+    reloc_tract_tminus1 = as.numeric(reloc_tract_tminus1)
+  ) %>%
+  select(-ct, -ct_lag, -diff_tract)
+
+# 1º ano observado: se reloc==1 -> 0
+data <- data %>%
+  group_by(id_estab) %>%
+  mutate(
+    reloc_tract_tminus1 = if_else(
+      year == min(year, na.rm = TRUE) & reloc_tract_tminus1 == 1,
+      0, reloc_tract_tminus1
+    )
+  ) %>%
+  ungroup()
+
+# regra Table 3: NA reloc -> 0; se morte NA => reloc NA
+data <- data %>%
+  mutate(
+    reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1), 0, reloc_tract_tminus1),
+    reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1)
+  )
 
 # ---------------------------------------------------------
-# 3) treat_B_agg, treat_trend e dummies 2008–2012
+# 3) Post agregado + dummies anuais + trend vars (igual Table 3)
 # ---------------------------------------------------------
+make_tract_num <- function(x) {
+  x_chr <- as.character(x)
+  x_chr[x_chr %in% c("", "NA")] <- NA_character_
+  x_num <- suppressWarnings(as.numeric(x_chr))
+  bad   <- !is.na(x_chr) & is.na(x_num)
+  if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) x_num <- as.numeric(factor(x_chr))
+  x_num
+}
 
 data <- data %>%
   mutate(
@@ -90,239 +130,226 @@ data <- data %>%
       !is.na(treat_B)             ~ 0,
       TRUE                        ~ NA_real_
     ),
-    treat_trend = if_else(year >= 2008, 1, 0)
+    treat_trend    = if_else(year >= 2008, 1, 0),
+    code_tract_num = make_tract_num(code_tract)
   )
 
 for (y in 2008:2012) {
-  var <- paste0("treat_B_", y)
-  data[[var]] <- dplyr::case_when(
+  v <- paste0("treat_B_", y)
+  data[[v]] <- dplyr::case_when(
     data$year == y & !is.na(data$treat_B) ~ data$treat_B,
     !is.na(data$treat_B) & data$year != y ~ 0,
     TRUE                                  ~ NA_real_
   )
 }
 
-# ---------------------------------------------------------
-# 4) Construir variáveis de baseline (ano base 2007)
-#    foreach i in afil size natjur subs_ibge rem_dez_r temp_empr
-#                   idade male educ_d2 educ_d3 educ_d4 age
-# ---------------------------------------------------------
-
-baseline_vars <- c("afil", "size", "natjur", "subs_ibge",
-                   "rem_dez_r", "temp_empr",
-                   "idade", "male",
-                   "educ_d2", "educ_d3", "educ_d4",
-                   "age")
-
-missing_baseline <- setdiff(baseline_vars, names(data))
-if (length(missing_baseline) > 0) {
-  stop("Variáveis ausentes na base para construir baseline (X2): ",
-       paste(missing_baseline, collapse = ", "))
-}
-
-for (v in baseline_vars) {
-  tmp <- ifelse(data$year == 2007, data[[v]], NA)
-  v2 <- ave(tmp, data$id_estab,
-            FUN = function(x) {
-              if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
-            })
-  data[[paste0(v, "2")]] <- v2
-}
+# janela Table 3
+data_tab <- data %>% filter(year >= 2003 & year <= 2012)
 
 # ---------------------------------------------------------
-# 5) Cortar para 2003–2012 (mesmo horizonte da Tabela 3)
+# 4) CONTROLES: baseline <=2007 por id_estab (SEM NA)
 # ---------------------------------------------------------
-
-data_tabB2 <- data %>%
-  filter(year >= 2003 & year <= 2012)
-
-# ---------------------------------------------------------
-# 6) Estimar modelos – Painel A igual; Painel B com controles
-# ---------------------------------------------------------
-
-outcomes <- c("morte", "mover_ano_mun")
-
-panelA <- list()
-panelB <- list()
-
-# dummies de tratamento 2008–2012
-treat_vars <- paste0("treat_B_", 2008:2012, collapse = " + ")
-
-# controles: i.year#c.X2  -> i(year, X2) no fixest
-baseline_vars2 <- paste0(baseline_vars, "2")
-control_terms  <- paste0("i(year, ", baseline_vars2, ")")
-controls_rhs   <- paste(control_terms, collapse = " + ")
-
-for (outcome in outcomes) {
-  
-  # ----- Painel A: agregado (sem controles extras) -----
-  fml_A1 <- as.formula(paste0(outcome, " ~ treat_B_agg | id_estab + year"))
-  fml_A2 <- as.formula(paste0(outcome, " ~ treat_B_agg | id_estab + year + treat_trend[code_tract]"))
-  
-  mA1 <- feols(
-    fml_A1,
-    data    = data_tabB2,
-    cluster = ~ id_estab,
-    lean    = TRUE
-  )
-  
-  mA2 <- feols(
-    fml_A2,
-    data    = data_tabB2,
-    cluster = ~ id_estab,
-    lean    = TRUE
-  )
-  
-  panelA[[outcome]] <- list(no_trend = mA1, trend = mA2)
-  
-  # ----- Painel B: dummies 2008–2012 + controles i(year, X2) -----
-  rhs_B <- paste(c(treat_vars, controls_rhs), collapse = " + ")
-  
-  fml_B1 <- as.formula(paste0(outcome, " ~ ", rhs_B, " | id_estab + year"))
-  fml_B2 <- as.formula(paste0(outcome, " ~ ", rhs_B, " | id_estab + year + treat_trend[code_tract]"))
-  
-  mB1 <- feols(
-    fml_B1,
-    data    = data_tabB2,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
-  )
-  
-  mB2 <- feols(
-    fml_B2,
-    data    = data_tabB2,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
-  )
-  
-  panelB[[outcome]] <- list(no_trend = mB1, trend = mB2)
-}
-
-mods_A <- list(
-  panelA[["morte"]]$no_trend,
-  panelA[["morte"]]$trend,
-  panelA[["mover_ano_mun"]]$no_trend,
-  panelA[["mover_ano_mun"]]$trend
+controls_candidates <- c(
+  "tamestab", "size", "natjur", "subs_ibge", "afil",
+  "age", "idade", "male",
+  "rem_dez_r", "rem_med_r", "temp_empr",
+  "educ_d1", "educ_d2", "educ_d3", "educ_d4"
 )
 
-mods_B <- list(
-  panelB[["morte"]]$no_trend,
-  panelB[["morte"]]$trend,
-  panelB[["mover_ano_mun"]]$no_trend,
-  panelB[["mover_ano_mun"]]$trend
-)
+controls_use <- intersect(controls_candidates, names(data_tab))
+
+# força numérico + baseline (2007; senão último <=2007; senão 0)
+baseline_scalar <- function(x, y){
+  i07 <- which(y == 2007 & !is.na(x))
+  if (length(i07) > 0) return(x[i07[1]])
+  ipre <- which(y <= 2007 & !is.na(x))
+  if (length(ipre) > 0) return(x[ipre[length(ipre)]])
+  0
+}
+
+if (length(controls_use) > 0) {
+  for (v in controls_use) {
+    data_tab[[v]] <- suppressWarnings(as.numeric(haven::zap_labels(data_tab[[v]])))
+  }
+  
+  data_tab <- data_tab %>%
+    group_by(id_estab) %>%
+    arrange(year, .by_group = TRUE) %>%
+    mutate(
+      across(
+        all_of(controls_use),
+        ~ baseline_scalar(.x, year),
+        .names = "{.col}2"
+      )
+    ) %>%
+    ungroup() %>%
+    mutate(
+      across(ends_with("2"), ~ if_else(is.na(.x), 0, .x))
+    )
+}
+
+controls_use2 <- paste0(controls_use, "2")
+control_terms <- if (length(controls_use2) > 0) {
+  paste0("i(year, ", controls_use2, ", ref = 2007)")
+} else character(0)
+
+rhs_A <- paste(c("treat_B_agg", control_terms), collapse = " + ")
+rhs_B <- paste(c(paste0("treat_B_", 2008:2012), control_terms), collapse = " + ")
 
 # ---------------------------------------------------------
-# 7) Funções auxiliares
+# 5) Modelos COM controles (mesma estrutura da Table 3)
 # ---------------------------------------------------------
+mA1_cl <- feols(as.formula(paste0("morte ~ ", rhs_A, " | id_estab + year")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
 
+mA2_cl <- feols(as.formula(paste0("morte ~ ", rhs_A, " | id_estab + year + treat_trend[code_tract_num]")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mA1_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_A, " | id_estab + year")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mA2_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_A, " | id_estab + year + treat_trend[code_tract_num]")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mB1_cl <- feols(as.formula(paste0("morte ~ ", rhs_B, " | id_estab + year")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mB2_cl <- feols(as.formula(paste0("morte ~ ", rhs_B, " | id_estab + year + treat_trend[code_tract_num]")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mB1_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_B, " | id_estab + year")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mB2_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_B, " | id_estab + year + treat_trend[code_tract_num]")),
+                data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mods_A <- list(mA1_cl, mA2_cl, mA1_rl, mA2_rl)
+mods_B <- list(mB1_cl, mB2_cl, mB1_rl, mB2_rl)
+
+# ---------------------------------------------------------
+# 5.1) CHECAGEM: nobs não pode mudar vs Table 3 (sem controles)
+# ---------------------------------------------------------
+# Panel A (sem controles)
+mA1_cl0 <- feols(morte ~ treat_B_agg | id_estab + year,
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mA2_cl0 <- feols(morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mA1_rl0 <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year,
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mA2_rl0 <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+# Panel B (sem controles)
+treat_vars0 <- paste0("treat_B_", 2008:2012, collapse = " + ")
+mB1_cl0 <- feols(as.formula(paste0("morte ~ ", treat_vars0, " | id_estab + year")),
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mB2_cl0 <- feols(as.formula(paste0("morte ~ ", treat_vars0, " | id_estab + year + treat_trend[code_tract_num]")),
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mB1_rl0 <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars0, " | id_estab + year")),
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+mB2_rl0 <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars0, " | id_estab + year + treat_trend[code_tract_num]")),
+                 data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+
+mods_A0 <- list(mA1_cl0, mA2_cl0, mA1_rl0, mA2_rl0)
+mods_B0 <- list(mB1_cl0, mB2_cl0, mB1_rl0, mB2_rl0)
+
+if (any(sapply(mods_A, nobs) != sapply(mods_A0, nobs))) {
+  stop("ERRO: controles mudaram o número de observações no Panel A. Isso NÃO pode acontecer.")
+}
+if (any(sapply(mods_B, nobs) != sapply(mods_B0, nobs))) {
+  stop("ERRO: controles mudaram o número de observações no Panel B. Isso NÃO pode acontecer.")
+}
+
+# ---------------------------------------------------------
+# 6) Helpers p/ LaTeX (termo sempre existe aqui)
+# ---------------------------------------------------------
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
-  out <- tt[tt$term == term, c("estimate", "std.error", "p.value")]
-  if (nrow(out) == 0) stop(paste("Termo não encontrado no modelo:", term))
-  out
+  out <- tt[tt$term == term, c("estimate","std.error","p.value")]
+  if (nrow(out) == 0) return(data.frame(estimate=NA_real_, std.error=NA_real_, p.value=NA_real_))
+  out[1, , drop = FALSE]
 }
 
 stars <- function(p) {
-  ifelse(p < 0.01, "***",
-         ifelse(p < 0.05, "**",
-                ifelse(p < 0.1, "*", "")))
+  if (is.na(p)) ""
+  else if (p < 0.01) "***"
+  else if (p < 0.05) "**"
+  else if (p < 0.1)  "*"
+  else ""
 }
 
-fmt_coef <- function(est, p) sprintf("%.5f%s", est, stars(p))
-fmt_se   <- function(se) sprintf("(%.5f)", se)
-fmt_obs  <- function(n)  format(n, big.mark = ",", scientific = FALSE)
+fmt_coef <- function(est, p) if (is.na(est)) "" else sprintf("%.5f%s", est, stars(p))
+fmt_se   <- function(se) if (is.na(se)) "" else sprintf("(%.5f)", se)
+fmt_obs  <- function(n) gsub(",", "{,}", format(n, big.mark = ",", scientific = FALSE), fixed = TRUE)
+
+pad <- "       "
+row_gap4 <- function(label, v) {
+  stopifnot(length(v) == 4)
+  paste0(label, " & ", v[1], " &", pad, "& ", v[2], " &", pad, "& ", v[3], " &", pad, "& ", v[4], "\\\\")
+}
 
 # ---------------------------------------------------------
-# 8) Montar LaTeX – Table B.2
+# 7) Build LaTeX (mesmo layout da Table 3, com linha de controles)
 # ---------------------------------------------------------
-
 lines <- c(
-  "\\begin{table}[!htbp]",
-  "\\centering",
-  "\\caption{Table B.2: Establishment-Level Estimates Including Control Variables}",
-  "\\label{tab:B2_estab_controls}",
-  "\\begin{tabular}{lcccc}",
-  "\\toprule",
-  " & (1) & (2) & (3) & (4)\\\\",
-  "\\midrule"
+  "\\begin{supptable}[H]",
+  "  \\centering",
+  "  \\tabcaption{Establishment-Level Estimates Including Control Variables}",
+  "  \\label{tab:b2_controls}",
+  "  \\scalebox{0.75}{",
+  " \\begin{threeparttable}",
+  "    \\begin{tabular}{lccccccc}",
+  "    \\toprule",
+  "          & (1)   &       & (2)   &       & (3)   &       & (4) \\\\",
+  "\\cmidrule(lr){2-2}\\cmidrule(lr){4-4}\\cmidrule(lr){6-6}\\cmidrule(lr){8-8}",
+  "    \\multicolumn{8}{l}{\\textbf{Panel A: Time-Agregatted DiD}}\\\\",
+  "    Dep. Var: & Closure & & Closure & & Relocation (Tract, t-1) & & Relocation (Tract, t-1) \\\\",
+  "    \\midrule"
 )
 
-# ------------------ Painel A -----------------------------
+# Panel A: treat_B_agg
+rowA  <- lapply(mods_A, get_est, term = "treat_B_agg")
+coefA <- sapply(rowA, \(x) fmt_coef(x$estimate, x$p.value))
+seA   <- sapply(rowA, \(x) fmt_se(x$std.error))
 
 lines <- c(lines,
-           "\\multicolumn{5}{l}{\\textbf{Panel A: Time-Aggregated DiD}}\\\\",
-           "Dep. Var. & \\multicolumn{2}{c}{Closure} & \\multicolumn{2}{c}{Relocation}\\\\",
-           "\\cmidrule(lr){2-3} \\cmidrule(lr){4-5}"
-)
-
-rowA <- lapply(mods_A, get_est, term = "treat_B_agg")
-coefA <- sapply(rowA, function(x) fmt_coef(x$estimate, x$p.value))
-seA   <- sapply(rowA, function(x) fmt_se(x$std.error))
-
-lines <- c(lines,
-           sprintf("Flash Flood Post & %s & %s & %s & %s\\\\",
-                   coefA[1], coefA[2], coefA[3], coefA[4]),
-           sprintf(" & %s & %s & %s & %s\\\\",
-                   seA[1], seA[2], seA[3], seA[4])
-)
+           row_gap4("    Flash Flood Post", coefA),
+           row_gap4("                     ", seA))
 
 obsA <- sapply(mods_A, nobs)
-obsA_str <- sapply(obsA, fmt_obs)
-
 lines <- c(lines,
-           "\\addlinespace",
-           sprintf("Observations & %s & %s & %s & %s\\\\",
-                   obsA_str[1], obsA_str[2], obsA_str[3], obsA_str[4]),
-           "Census Tract Trend & No & Yes & No & Yes\\\\",
-           "\\addlinespace"
+           row_gap4("    Observations", sapply(obsA, fmt_obs)),
+           row_gap4("    Census Tract Trend", c("No","Yes","No","Yes")),
+           row_gap4("    Baseline Controls $\\times$ Year", c("Yes","Yes","Yes","Yes")),
+           "    \\midrule",
+           "    \\multicolumn{8}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\",
+           "    Dep. Var: & Closure & & Closure & & Relocation  & & Relocation \\\\",
+           "    \\midrule"
 )
 
-# ------------------ Painel B -----------------------------
-
-lines <- c(lines,
-           "\\multicolumn{5}{l}{\\textbf{Panel B: Time-Varying DiD with Baseline Controls}}\\\\",
-           "Dep. Var. & \\multicolumn{2}{c}{Closure} & \\multicolumn{2}{c}{Relocation}\\\\",
-           "\\cmidrule(lr){2-3} \\cmidrule(lr){4-5}"
-)
-
-years_evt <- 2008:2012
-terms_evt <- paste0("treat_B_", years_evt)
-
-for (k in seq_along(years_evt)) {
-  yr   <- years_evt[k]
-  term <- terms_evt[k]
-  
-  rowB <- lapply(mods_B, get_est, term = term)
-  coefB <- sapply(rowB, function(x) fmt_coef(x$estimate, x$p.value))
-  seB   <- sapply(rowB, function(x) fmt_se(x$std.error))
-  
+# Panel B: 2008–2012
+for (yr in 2008:2012) {
+  term <- paste0("treat_B_", yr)
+  rowB  <- lapply(mods_B, get_est, term = term)
+  coefB <- sapply(rowB, \(x) fmt_coef(x$estimate, x$p.value))
+  seB   <- sapply(rowB, \(x) fmt_se(x$std.error))
   lines <- c(lines,
-             sprintf("Flash Flood %d & %s & %s & %s & %s\\\\",
-                     yr, coefB[1], coefB[2], coefB[3], coefB[4]),
-             sprintf(" & %s & %s & %s & %s\\\\",
-                     seB[1], seB[2], seB[3], seB[4])
-  )
+             row_gap4(sprintf("    Flash Flood %d", yr), coefB),
+             row_gap4("                     ", seB))
 }
 
 obsB <- sapply(mods_B, nobs)
-obsB_str <- sapply(obsB, fmt_obs)
-
 lines <- c(lines,
-           "\\addlinespace",
-           sprintf("Observations & %s & %s & %s & %s\\\\",
-                   obsB_str[1], obsB_str[2], obsB_str[3], obsB_str[4]),
-           "Census Tract Trend & No & Yes & No & Yes\\\\",
-           "\\midrule",
-           "\\multicolumn{5}{p{12cm}}{\\footnotesize Notes: This table shows establishment-level estimates from a difference-in-differences model for business closure (columns (1) and (2)) and relocation (columns (3) and (4)). Panel A presents results from a specification using a single post-treatment dummy. Panel B presents results from a specification with time-varying treatment dummies (2008--2012), additionally controlling for interactions between year dummies and a rich set of baseline firm characteristics (affiliation, size, legal status, sector, wage bill, tenure, age, gender and education composition). Establishment and year fixed effects are included in all estimations. Standard errors are clustered at the establishment and year level. *** p$<0.01$, ** p$<0.05$, * p$<0.1$.}\\\\",
-           "\\bottomrule",
-           "\\end{tabular}",
-           "\\end{table}"
+           row_gap4("    Observations", sapply(obsB, fmt_obs)),
+           row_gap4("    Census Tract Trend", c("No","Yes","No","Yes")),
+           row_gap4("    Baseline Controls $\\times$ Year", c("Yes","Yes","Yes","Yes")),
+           "    \\bottomrule",
+           "    \\end{tabular}%",
+           "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table replicates the main specification (Table 3) but adds baseline controls interacted with year dummies (i(year, X$_{\\le 2007}$, ref=2007)). Baseline values are taken in 2007 when available; otherwise the last non-missing value observed up to 2007; remaining missing are set to 0 to avoid changing the estimation sample. Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Treatment radius is 0--12.5 km and control ring is 50--80 km. Establishment and year fixed effects in all models; census tract trend in columns (2) and (4). Two-way clustered standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+           "   \t\\end{tablenotes}",
+           "   \t\\end{threeparttable}",
+           "   \t}",
+           "\\end{supptable}%"
 )
 
-# ---------------------------------------------------------
-# 9) Salvar LaTeX em arquivo
-# ---------------------------------------------------------
-
-outfile_B2 <- "Table_B2_Establishment_Level_Estimates_Including_Control_Variables.tex"
-writeLines(lines, outfile_B2)
+writeLines(lines, OUTFILE)

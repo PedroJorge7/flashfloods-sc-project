@@ -301,4 +301,4 @@ latex_lines <- c(
 )
 
 writeLines(latex_lines,
-           "establishments/analysis/Tab_04_Effect_by_Sector.tex")
+           "results/analysis/Tab_04_Effect_by_Sector.tex")

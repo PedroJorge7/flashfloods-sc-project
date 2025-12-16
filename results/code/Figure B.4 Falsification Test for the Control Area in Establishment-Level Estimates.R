@@ -1,5 +1,12 @@
 # ============================================================================
 # Figure B.4: Falsification Test for the Control Area in Establishment-Level Estimates
+# FIX DEFINITIVO:
+#  - NÃO tem Entry (só Closure e Relocation)
+#  - Relocation "crua" = Census Tract, t-1: lead(1[ct(t) != ct(t-1)], 1) + correção 1º ano
+#  - Regra alinhada aplicada DENTRO de cada ring: se morte_temp NA => reloc_temp NA
+#  - Forward fill do treat_B_temp ANTES de mascarar outcomes
+#  - Trend FE: treat_trend[code_tract_num]  (code_tract_num SEM NA!)
+#  - Safe feols: se ring/outcome não identifica, não quebra
 # ============================================================================
 
 rm(list = ls())
@@ -12,83 +19,106 @@ library(ggplot2)
 library(broom)
 library(ggpubr)
 
-# ---------------------------------------------------------
-# 1) Carregar base
-# ---------------------------------------------------------
+dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
+# ---------------------------------------------------------
+# 1) Helper: code_tract_num SEM NA (missing vira categoria)
+# ---------------------------------------------------------
+make_tract_num_no_na <- function(x){
+  x_chr <- as.character(x)
+  x_chr[x_chr %in% c("", "NA")] <- NA_character_
+  x_chr[is.na(x_chr)] <- "__MISSING_TRACT__"
+  as.numeric(factor(x_chr))
+}
 
-# Manter somente 2003–2012
+run_feols_safe <- function(fml, data, cluster_fml){
+  tryCatch(
+    feols(fml, data = data, cluster = cluster_fml, lean = TRUE),
+    error = function(e) NULL
+  )
+}
+
+tidy_term_safe <- function(model, term){
+  if (is.null(model)) return(data.frame(estimate = NA_real_, std.error = NA_real_))
+  tt <- broom::tidy(model)
+  rr <- tt[tt$term == term, c("estimate","std.error")]
+  if (nrow(rr) == 0) return(data.frame(estimate = NA_real_, std.error = NA_real_))
+  rr[1, , drop = FALSE]
+}
+
+# ---------------------------------------------------------
+# 2) Load data (não corta antes de construir relocation t-1)
+# ---------------------------------------------------------
+data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+  filter(year >= 2003) %>%
+  arrange(id_estab, year)
+
+need <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract")
+miss <- setdiff(need, names(data))
+if (length(miss) > 0) stop("Faltam colunas na base: ", paste(miss, collapse = ", "))
+
+# ---------------------------------------------------------
+# 3) Variáveis "originais" (numéricas) + relocation CRUA (sem corte por treat_B)
+# ---------------------------------------------------------
+data <- data %>%
+  group_by(id_estab) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(
+    morte_orig         = as.numeric(haven::zap_labels(morte)),
+    mover_ano_mun_orig = as.numeric(haven::zap_labels(mover_ano_mun))
+  ) %>%
+  ungroup()
+
+# Relocation CRUA: Census Tract, t-1 = lead(1[ct(t) != ct(t-1)], 1)
+data <- data %>%
+  group_by(id_estab) %>%
+  arrange(year, .by_group = TRUE) %>%
+  mutate(
+    ct     = as.character(code_tract),
+    ct_lag = lag(ct, 1),
+    diff_tract = case_when(
+      is.na(ct) | is.na(ct_lag) ~ NA_real_,
+      ct != ct_lag              ~ 1,
+      TRUE                      ~ 0
+    ),
+    reloc_raw = lead(diff_tract, 1)
+  ) %>%
+  ungroup() %>%
+  select(-ct, -ct_lag, -diff_tract) %>%
+  mutate(reloc_raw = as.numeric(reloc_raw))
+
+# correção 1º ano observado (igual seu padrão)
+data <- data %>%
+  group_by(id_estab) %>%
+  mutate(
+    reloc_raw = if_else(
+      year == min(year, na.rm = TRUE) & reloc_raw == 1,
+      0, reloc_raw
+    )
+  ) %>%
+  ungroup()
+
+# NA do reloc_raw vira 0 (missing de tract tratado como "não mudou")
+data <- data %>%
+  mutate(reloc_raw = if_else(is.na(reloc_raw), 0, reloc_raw))
+
+# ---------------------------------------------------------
+# 4) Trend FE (SEM NA em code_tract_num)
+# ---------------------------------------------------------
+data <- data %>%
+  mutate(
+    treat_trend    = if_else(year >= 2008, 1, 0),
+    code_tract_num = make_tract_num_no_na(code_tract)
+  )
+
+# janela da figura
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 2) Construção de tratamento principal (igual Tabela 3 / Fig. 3)
-#    -> só pra reproduzir exatamente as variáveis *_orig e o forward fill
+# 5) Rings falsos
 # ---------------------------------------------------------
-
-data <- data %>%
-  arrange(id_estab, year) %>%
-  group_by(id_estab) %>%
-  mutate(
-    # tratamento principal (0–12.5 km vs 50–80 km)
-    treat_B = case_when(
-      dist_flood <= 12.5 ~ 1,
-      dist_flood >= 50 & dist_flood <= 80 ~ 0,
-      TRUE ~ NA_real_
-    ),
-    # guardar originais
-    morte_orig         = morte,
-    new_firm_orig      = new_firm,
-    mover_ano_mun_orig = mover_ano_mun
-  ) %>%
-  # outcomes = NA onde treat_B é missing (como no Stata)
-  mutate(
-    morte    = if_else(is.na(treat_B), NA_real_, morte),
-    new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
-  ) %>%
-  # forward fill de treat_B usando relocação
-  mutate(
-    treat_B = {
-      tb  <- treat_B
-      mov <- mover_ano_mun
-      for (i in seq_along(tb)) {
-        if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
-          tb[i] <- tb[i - 1]
-        }
-      }
-      tb
-    }
-  ) %>%
-  # relocação também vira NA onde treat_B continua NA
-  mutate(
-    mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
-  ) %>%
-  ungroup()
-
-if ("mover_ano_tract" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_tract = if_else(is.na(treat_B), NA_real_, mover_ano_tract))
-}
-
-if ("mover_ano_cep" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
-}
-
-# tendência pós-choque para o slope por tract
-data <- data %>%
-  mutate(
-    treat_trend = if_else(year >= 2008, 1, 0)
-  )
-
-# ---------------------------------------------------------
-# 3) Especificações dos falsos anéis de controle
-#    Tratamento: 50–80 km   (antigo controle)
-#    Controles: anéis muito distantes
-# ---------------------------------------------------------
-
 control_specs <- list(
   "200-210 km" = list(lower = 200, upper = 210),
   "200-230 km" = list(lower = 200, upper = 230),
@@ -96,13 +126,9 @@ control_specs <- list(
   "210-240 km" = list(lower = 210, upper = 240)
 )
 
-outcomes <- c("morte", "new_firm", "mover_ano_mun")
+outcomes <- c("morte", "reloc_tract_tminus1")
 
 all_results <- data.frame()
-
-# ---------------------------------------------------------
-# 4) Loop sobre anéis de controle e outcomes
-# ---------------------------------------------------------
 
 for (ring in names(control_specs)) {
   
@@ -110,49 +136,48 @@ for (ring in names(control_specs)) {
   lower_c <- spec$lower
   upper_c <- spec$upper
   
-  # Tratamento = 50–80 km; Controle = [lower_c, upper_c]
   temp_data <- data %>%
     mutate(
       treat_B_temp = case_when(
         dist_flood >= 50 & dist_flood <= 80 ~ 1,
         dist_flood >= lower_c & dist_flood <= upper_c ~ 0,
         TRUE ~ NA_real_
-      ),
-      morte_temp         = morte_orig,
-      new_firm_temp      = new_firm_orig,
-      mover_ano_mun_temp = mover_ano_mun_orig
+      )
     ) %>%
     group_by(id_estab) %>%
+    arrange(year, .by_group = TRUE) %>%
     mutate(
-      # 1) outcomes = NA onde treat_B_temp é NA
-      morte_temp    = if_else(is.na(treat_B_temp), NA_real_, morte_temp),
-      new_firm_temp = if_else(is.na(treat_B_temp), NA_real_, new_firm_temp),
-      # 2) forward fill de treat_B_temp usando mover_ano_mun_temp ORIGINAL
+      # forward fill do treat_B_temp usando mover_ano_mun ORIGINAL (Stata)
       treat_B_temp = {
         tb  <- treat_B_temp
-        mov <- mover_ano_mun_temp
+        mov <- mover_ano_mun_orig
         for (i in seq_along(tb)) {
-          if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
-            tb[i] <- tb[i - 1]
-          }
+          if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) tb[i] <- tb[i - 1]
         }
         tb
-      },
-      # 3) só agora zera mover_ano_mun_temp onde treat_B_temp continua NA
-      mover_ano_mun_temp = if_else(is.na(treat_B_temp), NA_real_, mover_ano_mun_temp)
+      }
+    ) %>%
+    # AGORA sim mascarar outcomes com treat_B_temp final
+    mutate(
+      morte_temp = if_else(is.na(treat_B_temp), NA_real_, morte_orig),
+      
+      # relocation do ring vem da reloc_raw (crua), e só depois aplica regra alinhada
+      reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_raw),
+      reloc_tract_tminus1_temp = if_else(is.na(morte_temp), NA_real_, reloc_tract_tminus1_temp)
     ) %>%
     ungroup()
   
-  # dummies 2008–2012 e dummy agregada (Post)
+  # dummies 2008–2012
   for (y in 2008:2012) {
-    var <- paste0("treat_B_temp_", y)
-    temp_data[[var]] <- dplyr::case_when(
+    v <- paste0("treat_B_temp_", y)
+    temp_data[[v]] <- dplyr::case_when(
       temp_data$year == y & !is.na(temp_data$treat_B_temp) ~ temp_data$treat_B_temp,
       !is.na(temp_data$treat_B_temp) & temp_data$year != y  ~ 0,
       TRUE                                                  ~ NA_real_
     )
   }
   
+  # Post (agregado)
   temp_data <- temp_data %>%
     mutate(
       treat_B_agg_temp = case_when(
@@ -162,83 +187,81 @@ for (ring in names(control_specs)) {
       )
     )
   
-  # regressões por outcome
+  # -------------------------------------------------------
+  # regressões (Closure + Relocation)
+  # -------------------------------------------------------
   for (outcome in outcomes) {
     
     yvar <- paste0(outcome, "_temp")
     
-    # (1) modelo agregado (Post)
+    # (a) Post
     fml_agg <- as.formula(
-      paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract]")
+      paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract_num]")
     )
-    m_agg <- feols(
-      fml_agg,
-      data    = temp_data,
-      cluster = ~ id_estab,
-      lean    = TRUE
-    )
-    agg_row <- broom::tidy(m_agg) %>%
-      dplyr::filter(term == "treat_B_agg_temp") %>%
-      transmute(
-        Control_Ring = ring,
-        Outcome      = outcome,
-        Period       = "Post",
-        Coefficient  = estimate,
-        SE           = std.error,
-        CI_Low       = estimate - 1.96 * std.error,
-        CI_High      = estimate + 1.96 * std.error
-      )
     
-    # (2) modelo com dummies 2008–2012
+    m_agg <- run_feols_safe(
+      fml = fml_agg,
+      data = temp_data,
+      cluster_fml = ~ id_estab + year
+    )
+    
+    rr_agg <- tidy_term_safe(m_agg, "treat_B_agg_temp")
+    agg_row <- data.frame(
+      Control_Ring = ring,
+      Outcome      = outcome,
+      Period       = "Post",
+      Coefficient  = rr_agg$estimate,
+      SE           = rr_agg$std.error,
+      CI_Low       = rr_agg$estimate - 1.96 * rr_agg$std.error,
+      CI_High      = rr_agg$estimate + 1.96 * rr_agg$std.error
+    )
+    
+    # (b) Dummies 2008–2012
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
-             " | id_estab + year + treat_trend[code_tract]")
+             " | id_estab + year + treat_trend[code_tract_num]")
     )
-    m_evt <- feols(
-      fml_evt,
-      data    = temp_data,
-      cluster = ~ id_estab + year,
-      lean    = TRUE
+    
+    m_evt <- run_feols_safe(
+      fml = fml_evt,
+      data = temp_data,
+      cluster_fml = ~ id_estab + year
     )
-    evt_rows <- broom::tidy(m_evt) %>%
-      dplyr::filter(grepl("^treat_B_temp_", term)) %>%
-      mutate(
-        Period = gsub("treat_B_temp_", "", term)
-      ) %>%
-      transmute(
-        Control_Ring = ring,
-        Outcome      = outcome,
-        Period       = Period,
-        Coefficient  = estimate,
-        SE           = std.error,
-        CI_Low       = estimate - 1.96 * std.error,
-        CI_High      = estimate + 1.96 * std.error
-      )
+    
+    evt_rows <- if (is.null(m_evt)) {
+      data.frame()
+    } else {
+      broom::tidy(m_evt) %>%
+        dplyr::filter(grepl("^treat_B_temp_", term)) %>%
+        mutate(Period = gsub("treat_B_temp_", "", term)) %>%
+        transmute(
+          Control_Ring = ring,
+          Outcome      = outcome,
+          Period       = Period,
+          Coefficient  = estimate,
+          SE           = std.error,
+          CI_Low       = estimate - 1.96 * std.error,
+          CI_High      = estimate + 1.96 * std.error
+        )
+    }
     
     all_results <- bind_rows(all_results, agg_row, evt_rows)
   }
 }
 
 # ---------------------------------------------------------
-# 5) Preparar dados, paleta e painéis A/B/C
+# 6) Preparar dados e plot (2 painéis)
 # ---------------------------------------------------------
-
 all_results <- all_results %>%
   mutate(
     Outcome = factor(
       Outcome,
-      levels = c("morte", "new_firm", "mover_ano_mun"),
-      labels = c("Closure", "Entry", "Relocation")
+      levels = c("morte", "reloc_tract_tminus1"),
+      labels = c("Closure", "Relocation (Census Tract, t-1)")
     ),
-    Period  = factor(
-      Period,
-      levels = c("Post", "2008", "2009", "2010", "2011", "2012")
-    ),
-    Control_Ring = factor(
-      Control_Ring,
-      levels = c("200-210 km", "200-230 km", "230-240 km", "210-240 km")
-    )
+    Period = factor(Period, levels = c("Post","2008","2009","2010","2011","2012")),
+    Control_Ring = factor(Control_Ring, levels = names(control_specs))
   )
 
 ring_colors <- c(
@@ -252,64 +275,36 @@ pos_dodge <- position_dodge(width = 0.4)
 
 make_panel <- function(df, title_label) {
   ggplot(df, aes(x = Period, y = Coefficient, color = Control_Ring)) +
-    geom_point(position = pos_dodge, size = 2) +
+    geom_point(position = pos_dodge, size = 2, na.rm = TRUE) +
     geom_errorbar(
       aes(ymin = CI_Low, ymax = CI_High),
-      position = pos_dodge, width = 0.2
+      position = pos_dodge, width = 0.2, na.rm = TRUE
     ) +
     geom_hline(yintercept = 0, linetype = "dashed") +
     scale_x_discrete(drop = FALSE) +
     scale_color_manual(values = ring_colors, name = "Control Radius") +
-    labs(
-      x = "Year",
-      y = "Coefficient",
-      title = title_label
-    ) +
-    theme_bw() +
-    theme(legend.position = "bottom")
+    labs(x = "Year", y = "Coefficient", title = title_label) +
+    theme_bw()
 }
 
-# Painel A - Closure
-pA <- make_panel(
-  df = dplyr::filter(all_results, Outcome == "Closure"),
-  title_label = "A - Establishment Closure (0/1)"
-)
+pA <- make_panel(filter(all_results, Outcome == "Closure"),
+                 "A - Establishment Closure (0/1)")
 
-# Painel B - Entry
-pB <- make_panel(
-  df = dplyr::filter(all_results, Outcome == "Entry"),
-  title_label = "B - Establishment Entry (0/1)"
-)
-
-# Painel C - Relocation
-pC <- make_panel(
-  df = dplyr::filter(all_results, Outcome == "Relocation"),
-  title_label = "C - Establishment Relocation (0/1)"
-)
-
-# ---------------------------------------------------------
-# 6) Combinar com legenda única embaixo
-#     (topo: A e B; embaixo: C, e um slot vazio se quiser imitar o layout)
-# ---------------------------------------------------------
+pB <- make_panel(filter(all_results, Outcome == "Relocation (Census Tract, t-1)"),
+                 "B - Establishment Relocation")
 
 fig_falsification <- ggpubr::ggarrange(
-  pA, pB, 
-  nrow          = 1,
-  ncol          = 2,
+  pA, pB,
+  nrow = 1, ncol = 2,
   common.legend = TRUE,
-  legend        = "bottom"
+  legend = "bottom"
 )
-
-# ---------------------------------------------------------
-# 7) Salvar figura e (se quiser) os coeficientes
-# ---------------------------------------------------------
 
 ggsave(
-  filename = "establishments/analysis/Fig_B4_Falsification_Control_Area.png",
+  filename = "./results/analysis/results_falso_tratamento2.png",
   plot     = fig_falsification,
   dpi      = 300,
-  width    = 14,
-  height   = 7,
+  width    = 12,
+  height   = 6,
   units    = "in"
 )
-
