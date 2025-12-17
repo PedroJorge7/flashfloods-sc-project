@@ -1,7 +1,7 @@
 # ============================================================================
 # Figure 2: Evolution of Aggregate Outcomes (2003-2012) – 4 panels
 #   FIXED: Relocation measure = Census Tract, t-1 (via code_tract)
-#   FIXED: panel B “empty” (label mismatch) + robust code_tract -> character
+#   FIXED: panel B “empty” (label mismatch)
 # Output: ./results/analysis/graph_descritivo.png
 # ============================================================================
 
@@ -78,20 +78,14 @@ if ("mover_ano_cep" %in% names(data)) {
 
 # ============================================================================
 # 3) Relocation (Census Tract, t-1) a partir de code_tract
-#    Lógica por estabelecimento:
-#      diff_tract = 1 se code_tract != lag(code_tract)
-#      reloc_tract_tminus1 = lead(diff_tract, 1)
 # ============================================================================
 if (!("code_tract" %in% names(data))) {
   stop("Variável 'code_tract' não existe na base. Não dá para construir relocation por census tract.")
 }
-
-# se estiver 100% NA, não tem o que fazer (a variável vem vazia do .dta)
 if (all(is.na(data$code_tract))) {
   stop("Variável 'code_tract' está 100% NA na base (vazia). Verifique o .dta / variável correta.")
 }
 
-# conversor robusto para não virar notação científica quando code_tract é numérico grande
 to_chr_id <- function(x) {
   if (inherits(x, "haven_labelled")) x <- haven::zap_labels(x)
   if (is.character(x)) return(trimws(x))
@@ -160,10 +154,10 @@ base_agregado <- data %>%
       treat_B == 0 ~ "Control",
       TRUE         ~ "Others"
     ),
-    # >>> FIX: rótulo do painel B tem que bater com vars_ordem <<<
+    # >>> FIX MÍNIMO: label do relocation tem que bater com vars_ordem <<<
     variable = case_when(
       variable == "morte"               ~ "A - Closure Rate (%)",
-      variable == "reloc_tract_tminus1" ~ "B - Relocation Rate (Census Tract, t-1) (%)",
+      variable == "reloc_tract_tminus1" ~ "B - Relocation Rate (%)",
       variable == "empregados"          ~ "C - Mean number of Employees",
       variable == "massa_salarial"      ~ "D - Mean Payroll (in BRL)",
       TRUE                              ~ NA_character_
@@ -172,16 +166,22 @@ base_agregado <- data %>%
   filter(treat %in% c("Treat", "Control"), !is.na(variable)) %>%
   arrange(variable, treat, year)
 
-# ordem fixa dos painéis
+# ordem fixa dos painéis (agora bate com o case_when acima)
 vars_ordem <- c(
   "A - Closure Rate (%)",
-  "B - Relocation Rate (Census Tract, t-1) (%)",
+  "B - Relocation Rate (%)",
   "C - Mean number of Employees",
   "D - Mean Payroll (in BRL)"
 )
 
+# checagem: se algum painel sumir, para aqui (pra não salvar gráfico errado)
+panels_missing <- setdiff(vars_ordem, unique(base_agregado$variable))
+if (length(panels_missing) > 0) {
+  stop("Painéis sem dados (mismatch de labels): ", paste(panels_missing, collapse = " | "))
+}
+
 # ============================================================================
-# 5) Função de plot
+# 5) Função de plot (SEU ESTILO)
 # ============================================================================
 create_plot <- function(df, var_name) {
   df %>%

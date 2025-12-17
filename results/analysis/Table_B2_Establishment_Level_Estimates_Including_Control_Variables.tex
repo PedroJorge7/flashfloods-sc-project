@@ -1,41 +1,41 @@
 \begin{supptable}[H]
   \centering
-  \tabcaption{Establishment-Level Estimates Including Control Variables}
-  \label{tab:b2_controls}
-  \scalebox{0.75}{
+  \tabcaption{Establishment-Level Estimates Including Control Variables (Trend Only)}
+  \label{tab:b2_controls_trend}
+  \scalebox{0.80}{
  \begin{threeparttable}
-    \begin{tabular}{lccccccc}
+    \begin{tabular}{lccc}
     \toprule
-          & (1)   &       & (2)   &       & (3)   &       & (4) \\
-\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
-    \multicolumn{8}{l}{\textbf{Panel A: Time-Agregatted DiD}}\\
-    Dep. Var: & Closure & & Closure & & Relocation (Tract, t-1) & & Relocation (Tract, t-1) \\
+          & (1)   &       & (2) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}
+    \multicolumn{4}{l}{\textbf{Panel A: Time-Agregatted DiD}}\\
+    Dep. Var: & Closure & & Relocation \\
     \midrule
-    Flash Flood Post & 0.00654*** &       & 0.01076*** &       & -0.00484** &       & -0.00295\\
-                      & (0.00155) &       & (0.00240) &       & (0.00181) &       & (0.00188)\\
-    Observations & 367{,}402 &       & 367{,}402 &       & 367{,}402 &       & 367{,}402\\
-    Census Tract Trend & No &       & Yes &       & No &       & Yes\\
-    Baseline Controls $\times$ Year & Yes &       & Yes &       & Yes &       & Yes\\
+    Flash Flood Post & 0.01076*** &       & -0.00295\\
+                      & (0.00240) &       & (0.00188)\\
+    Observations & 367{,}402 &       & 367{,}402\\
+    Census Tract Trend & Yes &       & Yes\\
+    Baseline Controls $\times$ Year & Yes &       & Yes\\
     \midrule
-    \multicolumn{8}{l}{\textbf{Panel B: Time-Varying DiD}}\\
-    Dep. Var: & Closure & & Closure & & Relocation  & & Relocation \\
+    \multicolumn{4}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+    Dep. Var: & Closure & & Relocation \\
     \midrule
-    Flash Flood 2008 & 0.00453* &       & 0.00874** &       & -0.00492** &       & -0.00301\\
-                      & (0.00211) &       & (0.00272) &       & (0.00170) &       & (0.00194)\\
-    Flash Flood 2009 & 0.00439* &       & 0.00861** &       & -0.00513** &       & -0.00324\\
-                      & (0.00229) &       & (0.00340) &       & (0.00182) &       & (0.00203)\\
-    Flash Flood 2010 & 0.00606* &       & 0.01029** &       & -0.00554** &       & -0.00369*\\
-                      & (0.00275) &       & (0.00388) &       & (0.00178) &       & (0.00200)\\
-    Flash Flood 2011 & 0.00995*** &       & 0.01417*** &       & -0.00289 &       & -0.00100\\
-                      & (0.00289) &       & (0.00391) &       & (0.00201) &       & (0.00212)\\
-    Flash Flood 2012 & 0.00930*** &       & 0.01351*** &       & -0.00560** &       & -0.00373\\
-                      & (0.00270) &       & (0.00355) &       & (0.00175) &       & (0.00208)\\
-    Observations & 367{,}402 &       & 367{,}402 &       & 367{,}402 &       & 367{,}402\\
-    Census Tract Trend & No &       & Yes &       & No &       & Yes\\
-    Baseline Controls $\times$ Year & Yes &       & Yes &       & Yes &       & Yes\\
+    Flash Flood 2008 & 0.00874** &       & -0.00301\\
+                      & (0.00272) &       & (0.00194)\\
+    Flash Flood 2009 & 0.00861** &       & -0.00324\\
+                      & (0.00340) &       & (0.00203)\\
+    Flash Flood 2010 & 0.01029** &       & -0.00369*\\
+                      & (0.00388) &       & (0.00200)\\
+    Flash Flood 2011 & 0.01417*** &       & -0.00100\\
+                      & (0.00391) &       & (0.00212)\\
+    Flash Flood 2012 & 0.01351*** &       & -0.00373\\
+                      & (0.00355) &       & (0.00208)\\
+    Observations & 367{,}402 &       & 367{,}402\\
+    Census Tract Trend & Yes &       & Yes\\
+    Baseline Controls $\times$ Year & Yes &       & Yes\\
     \bottomrule
     \end{tabular}%
-   	\begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table replicates the main specification (Table 3) but adds baseline controls interacted with year dummies (i(year, X$_{\le 2007}$, ref=2007)). Baseline values are taken in 2007 when available; otherwise the last non-missing value observed up to 2007; remaining missing are set to 0 to avoid changing the estimation sample. Closure is measured by \textit{morte}. Relocation is defined as \textit{Census Tract, t-1}: $reloc\_tract\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \texttt{code\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\_tract\_tminus1=0$ when it would otherwise be 1. Treatment radius is 0--12.5 km and control ring is 50--80 km. Establishment and year fixed effects in all models; census tract trend in columns (2) and (4). Two-way clustered standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+   	\begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table replicates the main specification (Table 3) but reports only the versions including census tract trends (treat\_trend[code\_tract\_num]) and adds baseline controls interacted with year dummies (i(year, X$_{\le 2007}$, ref=2007)). Baseline values are taken in 2007 when available; otherwise the last non-missing value observed up to 2007; remaining missing are set to 0 to avoid changing the estimation sample. Closure is measured by \textit{morte}. Relocation is defined as \textit{Census Tract, t-1}: $reloc\_tract\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \texttt{code\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\_tract\_tminus1=0$ when it would otherwise be 1. Treatment radius is 0--12.5 km and control ring is 50--80 km. Establishment and year fixed effects in all models. Two-way clustered standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
    	\end{tablenotes}
    	\end{threeparttable}
    	}

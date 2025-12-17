@@ -2,11 +2,11 @@
 ## Appendix – Table B.3 (R)
 ## Establishment-Level Estimates Increasing the Post-Treatment Period
 ## - Janela: 2003–2016
-## - IGUAL Table 3: 4 colunas (Closure, Closure+Trend, Reloc, Reloc+Trend)
+## - TREND ONLY: 2 colunas (Closure+Trend, Reloc+Trend)
 ## - ONLY: morte e reloc_tract_tminus1
-## - Relocation = Census Tract, t-1 (via code_tract), igual Table 3 que você fixou
+## - Relocation = Census Tract, t-1 (via code_tract), igual Table 3
 ## - Cluster 2-way: id_estab + year
-## - SAFE: se algum termo (ex.: treat_B_2016) for dropado, NÃO quebra (deixa vazio)
+## - SAFE: termo dropado (ex.: treat_B_2016) => NÃO quebra (deixa vazio)
 ## - Salva com o NOME CERTO:
 ##   ./results/analysis/Table_B3_Establishment_Level_Estimates_Increasing_Post_Treatment_Period.tex
 ############################################################
@@ -126,9 +126,7 @@ make_tract_num <- function(x) {
   x_chr[x_chr %in% c("", "NA")] <- NA_character_
   x_num <- suppressWarnings(as.numeric(x_chr))
   bad   <- !is.na(x_chr) & is.na(x_num)
-  if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) {
-    x_num <- as.numeric(factor(x_chr))
-  }
+  if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) x_num <- as.numeric(factor(x_chr))
   x_num
 }
 
@@ -155,44 +153,35 @@ for (y in 2008:2016) {
 # ---------------------------------------------------------
 # 4) Restrict 2003–2016
 # ---------------------------------------------------------
-data_tab <- data %>%
-  filter(year >= 2003 & year <= 2016)
+data_tab <- data %>% filter(year >= 2003 & year <= 2016)
 
 # ---------------------------------------------------------
-# 5) Estimate models (4 colunas, igual Table 3)
+# 5) Estimate models (TREND ONLY, 2 colunas)
 # ---------------------------------------------------------
 treat_vars_B <- paste0("treat_B_", 2008:2016, collapse = " + ")
 
-# Panel A
-mA1_cl <- feols(morte ~ treat_B_agg | id_estab + year,
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+# Panel A (trend only)
+mA_cl_tr <- feols(
+  morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
+  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
 )
-mA2_cl <- feols(morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
-)
-mA1_rl <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year,
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
-)
-mA2_rl <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+mA_rl_tr <- feols(
+  reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
+  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
 )
 
-# Panel B
-mB1_cl <- feols(as.formula(paste0("morte ~ ", treat_vars_B, " | id_estab + year")),
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+# Panel B (trend only)
+mB_cl_tr <- feols(
+  as.formula(paste0("morte ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
+  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
 )
-mB2_cl <- feols(as.formula(paste0("morte ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
-)
-mB1_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars_B, " | id_estab + year")),
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
-)
-mB2_rl <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
-                data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+mB_rl_tr <- feols(
+  as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
+  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
 )
 
-mods_A <- list(mA1_cl, mA2_cl, mA1_rl, mA2_rl)
-mods_B <- list(mB1_cl, mB2_cl, mB1_rl, mB2_rl)
+mods_A <- list(mA_cl_tr, mA_rl_tr)
+mods_B <- list(mB_cl_tr, mB_rl_tr)
 
 # ---------------------------------------------------------
 # 6) Helpers (SAFE p/ termo dropado)
@@ -216,71 +205,71 @@ get_est_safe <- function(model, term) {
 }
 
 pad <- "       "
-row_gap4 <- function(label, v) {
-  stopifnot(length(v) == 4)
-  paste0(label, " & ", v[1], " &", pad, "& ", v[2], " &", pad, "& ", v[3], " &", pad, "& ", v[4], "\\\\")
+row_gap2 <- function(label, v) {
+  stopifnot(length(v) == 2)
+  paste0(label, " & ", v[1], " &", pad, "& ", v[2], "\\\\")
 }
 
 # ---------------------------------------------------------
-# 7) Build LaTeX
+# 7) Build LaTeX (TREND ONLY)
 # ---------------------------------------------------------
 lines <- c(
   "\\begin{supptable}[H]",
   "  \\centering",
-  "  \\tabcaption{Establishment-Level Estimates Increasing the Post-Treatment Period}",
+  "  \\tabcaption{Establishment-Level Estimates Increasing the Post-Treatment Period (Trend Only)}",
   "  \\label{rob5:est}",
-  "  \\scalebox{0.70}{",
+  "  \\scalebox{0.75}{",
   " \\begin{threeparttable}",
-  "    \\begin{tabular}{lccccccc}",
+  "    \\begin{tabular}{lccc}",
   "    \\toprule",
-  "          & (1)   &       & (2)   &       & (3)   &       & (4) \\\\",
-  "\\cmidrule(lr){2-2}\\cmidrule(lr){4-4}\\cmidrule(lr){6-6}\\cmidrule(lr){8-8}",
-  "    \\multicolumn{8}{l}{\\textbf{Panel A: Time-Agregatted DiD}}\\\\",
-  "    Dep. Var: & Closure & & Closure & & Relocation (Tract, t-1) & & Relocation (Tract, t-1) \\\\",
+  "          & (1)   &       & (2) \\\\",
+  "\\cmidrule(lr){2-2}\\cmidrule(lr){4-4}",
+  "    \\multicolumn{4}{l}{\\textbf{Panel A: Time-Agregatted DiD}}\\\\",
+  "    Dep. Var: & Closure & & Relocation \\\\",
   "    \\midrule"
 )
 
+# Panel A: treat_B_agg
 rowA  <- lapply(mods_A, get_est_safe, term = "treat_B_agg")
 coefA <- sapply(rowA, \(x) fmt_coef(x$estimate, x$p.value))
 seA   <- sapply(rowA, \(x) fmt_se(x$std.error))
 
-lines <- c(lines,
-           row_gap4("    Flash Flood Post", coefA),
-           row_gap4("                     ", seA)
+lines <- c(
+  lines,
+  row_gap2("    Flash Flood Post", coefA),
+  row_gap2("                     ", seA),
+  row_gap2("    Observations", sapply(sapply(mods_A, nobs), fmt_obs)),
+  row_gap2("    Census Tract Trend", c("Yes","Yes")),
+  "    \\midrule",
+  "    \\multicolumn{4}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\",
+  "    Dep. Var: & Closure & & Relocation \\\\",
+  "    \\midrule"
 )
 
-obsA <- sapply(mods_A, nobs)
-lines <- c(lines,
-           row_gap4("    Observations", sapply(obsA, fmt_obs)),
-           row_gap4("    Census Tract Trend", c("No","Yes","No","Yes")),
-           "    \\midrule",
-           "    \\multicolumn{8}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\",
-           "    Dep. Var: & Closure & & Closure & & Relocation & & Relocation \\\\",
-           "    \\midrule"
-)
-
+# Panel B: 2008–2016 (SAFE)
 for (yr in 2008:2016) {
   term <- paste0("treat_B_", yr)
   rowB  <- lapply(mods_B, get_est_safe, term = term)
   coefB <- sapply(rowB, \(x) fmt_coef(x$estimate, x$p.value))
   seB   <- sapply(rowB, \(x) fmt_se(x$std.error))
-  lines <- c(lines,
-             row_gap4(sprintf("    Flash Flood %d", yr), coefB),
-             row_gap4("                     ", seB)
+  lines <- c(
+    lines,
+    row_gap2(sprintf("    Flash Flood %d", yr), coefB),
+    row_gap2("                     ", seB)
   )
 }
 
-obsB <- sapply(mods_B, nobs)
-lines <- c(lines,
-           row_gap4("    Observations", sapply(obsB, fmt_obs)),
-           row_gap4("    Census Tract Trend", c("No","Yes","No","Yes")),
-           "    \\bottomrule",
-           "    \\end{tabular}%",
-           "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table extends the post-treatment period through 2016 relative to the baseline specification. Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy; Panel B uses time-varying treatment dummies (2008--2016). The treatment radius ranges from 0 to 12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. The census tract trend is included in columns (2) and (4). Two-way clustered-robust standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
-           "   \t\\end{tablenotes}",
-           "   \t\\end{threeparttable}",
-           "   \t}",
-           "\\end{supptable}%"
+lines <- c(
+  lines,
+  row_gap2("    Observations", sapply(sapply(mods_B, nobs), fmt_obs)),
+  row_gap2("    Census Tract Trend", c("Yes","Yes")),
+  "    \\bottomrule",
+  "    \\end{tabular}%",
+  "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table extends the post-treatment period through 2016 relative to the baseline specification and reports only the versions including census tract trends via varying slopes (treat\\_trend[code\\_tract\\_num]). Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy (treat\\_B\\_agg); Panel B uses time-varying treatment dummies (2008--2016). The treatment radius ranges from 0 to 12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+  "   \t\\end{tablenotes}",
+  "   \t\\end{threeparttable}",
+  "   \t}",
+  "\\end{supptable}%"
 )
 
 writeLines(lines, OUTFILE)

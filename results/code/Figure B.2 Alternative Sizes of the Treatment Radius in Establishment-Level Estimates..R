@@ -320,7 +320,7 @@ pA <- make_panel(
 
 pB <- make_panel(
   df = dplyr::filter(all_results, Outcome == "Relocation"),
-  title_label = "B - Establishment Relocation (0/1) [Census Tract, t-1]"
+  title_label = "B - Establishment Relocation (0/1)"
 )
 
 # ---------------------------------------------------------

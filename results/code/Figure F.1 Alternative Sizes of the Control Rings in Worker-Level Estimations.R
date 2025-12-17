@@ -26,8 +26,7 @@ control_colors <- c(
   "30-50 km"  = "#FEE0D2",
   "30-80 km"  = "#FCBBA1",
   "60-80 km"  = "#FB6A4A",
-  "50-100 km" = "#EF3B2C",
-  "80-100 km" = "#CB181D"
+  "50-100 km" = "#CB181D"
 )
 
 # ---------------------------------------------------------
@@ -59,25 +58,24 @@ output_empregados_30_80  <- output_empregados(dados, 0, 12.5, 30, 80,  trend = T
 output_empregados_60_80  <- output_empregados(dados, 0, 12.5, 60, 80,  trend = TRUE)
 output_empregados_30_50  <- output_empregados(dados, 0, 12.5, 30, 50,  trend = TRUE)
 output_empregados_50_100 <- output_empregados(dados, 0, 12.5, 50, 100, trend = TRUE)
-output_empregados_80_100 <- output_empregados(dados, 0, 12.5, 80, 100, trend = TRUE)
+#output_empregados_80_100 <- output_empregados(dados, 0, 12.5, 80, 100, trend = TRUE)
 
 output <- bind_rows(
   output_empregados_30_80,
   output_empregados_60_80,
   output_empregados_30_50,
-  output_empregados_50_100,
-  output_empregados_80_100
+  output_empregados_50_100
 ) %>%
   filter(type == "type_treatment") %>%
   mutate(
     parmseq = gsub("^Flash Flood\\s+", "", as.character(parmseq)),
     radius  = paste0(control, " km"),
-    radius  = factor(radius, levels = c("30-50 km","30-80 km","60-80 km","50-100 km","80-100 km"))
+    radius  = factor(radius, levels = c("30-50 km", "30-80 km", "60-80 km", "50-100 km"))
   ) %>%
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-if (nrow(output) == 0) stop("Robustez 1: `output` ficou vazio depois dos filtros/conversões.")
+#if (nrow(output) == 0) stop("Robustez 1: `output` ficou vazio depois dos filtros/conversões.")
 
 # ---------------------------------------------------------
 # Plot (comparando controles no MESMO painel, com cores padrão)
