@@ -1,10 +1,8 @@
 ############################################################
 ## Robustez 1 – Mudanças no Anel de Controle (Workers)
-## Controles: 30-80 60-80 30-50 50-100 80-100 (treat fixo 0–12.5)
+## Controles (EXATAMENTE iguais ao establishment e NA MESMA ORDEM):
+##   40-70, 50-80, 30-80, 50-100  (treat fixo 0–12.5)
 ## Saída: ./results/analysis/results_controles_empregados.png
-## AJUSTES:
-##  - Cores padrão (paleta nomeada pelos níveis do radius)
-##  - Painéis em apenas 1 linha (ggarrange nrow = 1)
 ############################################################
 
 rm(list = ls())
@@ -20,12 +18,23 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 source("./results/code/Aux.R")
 
 # ---------------------------------------------------------
-# Paleta padrão (NOMES = níveis do radius)
+# Raios (EXATAMENTE iguais)
 # ---------------------------------------------------------
+control_specs <- list(
+  "40-70"  = c(40, 70),
+  "50-80"  = c(50, 80),
+  "30-80"  = c(30, 80),
+  "50-100" = c(50, 100)
+)
+
+# ORDEM OBRIGATÓRIA (a que você pediu)
+radius_levels <- c("40-70 km", "50-80 km", "30-80 km", "50-100 km")
+
+# Paleta (EXATAMENTE)
 control_colors <- c(
-  "30-50 km"  = "#FEE0D2",
-  "30-80 km"  = "#FCBBA1",
-  "60-80 km"  = "#FB6A4A",
+  "40-70 km"  = "#FEE0D2",
+  "50-80 km"  = "#FCBBA1",
+  "30-80 km"  = "#FB6A4A",
   "50-100 km" = "#CB181D"
 )
 
@@ -36,8 +45,10 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
+if (nrow(dados) == 0) stop("Workers: `dados` ficou vazio após filtros.")
+
 # ---------------------------------------------------------
-# Helper: garante tipos numéricos (evita plot “sumir”)
+# Helper: garante tipos numéricos (evita plot sumir)
 # ---------------------------------------------------------
 clean_output_for_plot <- function(df) {
   df %>%
@@ -52,33 +63,45 @@ clean_output_for_plot <- function(df) {
 }
 
 # ---------------------------------------------------------
-# Rodar outputs por anel de controle (treat fixo 0–12.5)
+# Rodar outputs por anel (treat fixo 0–12.5)
 # ---------------------------------------------------------
-output_empregados_30_80  <- output_empregados(dados, 0, 12.5, 30, 80,  trend = TRUE)
-output_empregados_60_80  <- output_empregados(dados, 0, 12.5, 60, 80,  trend = TRUE)
-output_empregados_30_50  <- output_empregados(dados, 0, 12.5, 30, 50,  trend = TRUE)
-output_empregados_50_100 <- output_empregados(dados, 0, 12.5, 50, 100, trend = TRUE)
-#output_empregados_80_100 <- output_empregados(dados, 0, 12.5, 80, 100, trend = TRUE)
+outputs_list <- lapply(names(control_specs), function(k) {
+  lo <- control_specs[[k]][1]
+  up <- control_specs[[k]][2]
+  
+  output_empregados(
+    dados,
+    0, 12.5,
+    lo, up,
+    trend = TRUE
+  )
+})
 
-output <- bind_rows(
-  output_empregados_30_80,
-  output_empregados_60_80,
-  output_empregados_30_50,
-  output_empregados_50_100
-) %>%
+output_raw <- bind_rows(outputs_list)
+if (nrow(output_raw) == 0) stop("Workers: `output_raw` ficou vazio.")
+
+# ---------------------------------------------------------
+# Filtrar + construir radius + ordenar
+# ---------------------------------------------------------
+output <- output_raw %>%
   filter(type == "type_treatment") %>%
   mutate(
     parmseq = gsub("^Flash Flood\\s+", "", as.character(parmseq)),
-    radius  = paste0(control, " km"),
-    radius  = factor(radius, levels = c("30-50 km", "30-80 km", "60-80 km", "50-100 km"))
+    
+    # garante string no formato "40-70 km" etc.
+    control_chr = gsub("\\s+", "", as.character(control)),
+    radius      = paste0(control_chr, " km"),
+    
+    # FORÇA ORDEM AQUI
+    radius      = factor(radius, levels = radius_levels)
   ) %>%
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-#if (nrow(output) == 0) stop("Robustez 1: `output` ficou vazio depois dos filtros/conversões.")
+if (nrow(output) == 0) stop("Workers: `output` ficou vazio após filtros/conversões.")
 
 # ---------------------------------------------------------
-# Plot (comparando controles no MESMO painel, com cores padrão)
+# Plot (ordem e cores FORÇADAS via breaks/limits)
 # ---------------------------------------------------------
 plot_one <- function(reg) {
   dd <- output %>% filter(Regression == reg)
@@ -91,7 +114,12 @@ plot_one <- function(reg) {
     ) +
     geom_vline(xintercept = 0, linetype = "dashed") +
     scale_y_discrete(limits = c("Post","2008","2009","2010","2011","2012")) +
-    scale_color_manual(values = control_colors, drop = FALSE) +
+    scale_color_manual(
+      values = control_colors,
+      breaks = radius_levels,   # <- ORDEM DA LEGENDA
+      limits = radius_levels,   # <- ORDEM FIXA (mesmo se faltar nível)
+      drop   = FALSE
+    ) +
     coord_flip() +
     labs(x = "Coefficient", y = "Year", title = reg, color = "Control Radius") +
     theme_bw() +
@@ -100,14 +128,15 @@ plot_one <- function(reg) {
 
 reg_names <- unique(output$Regression)
 
-# se tiver emp/wage, foca neles (senão plota tudo que existir)
+# se tiver emp/wage, foca neles (senão plota tudo)
 keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
 if (length(keep) > 0) reg_names <- keep
 
 plots_list <- lapply(reg_names, plot_one)
+if (length(plots_list) == 0) stop("Workers: nenhum painel para plotar.")
 
 # ---------------------------------------------------------
-# AJUSTE: montar em apenas 1 linha
+# 1 linha
 # ---------------------------------------------------------
 nplots <- length(plots_list)
 fig <- ggpubr::ggarrange(
@@ -128,4 +157,3 @@ ggsave(
   height   = 15,
   units    = "cm"
 )
-

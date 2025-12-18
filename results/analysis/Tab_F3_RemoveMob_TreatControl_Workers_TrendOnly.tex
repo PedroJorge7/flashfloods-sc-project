@@ -1,0 +1,42 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{Robustness: Removing workers linked to establishments that switch between treated and control areas (Trend only)}
+  \label{tab:workers_remove_mob_trend_only}
+  \scalebox{0.80}{
+  \begin{threeparttable}
+    \begin{tabular}{l c p{0.60cm} c}
+    \toprule
+          & (1)   &       & (2)   \\
+ \cmidrule(lr){2-2}\cmidrule(lr){4-4}
+  \multicolumn{4}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+ Dep. Var:   & Employment &       & log Wage \\
+    \midrule
+    Flash Flood Post & -0.14282*** &  & 0.04686***\\
+                     & (0.01230) &  & (0.01230)\\
+    Observations & 45300 &  & 38560\\
+    Census Tract Trend & Yes &  & Yes\\
+  \midrule
+  \multicolumn{4}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+ Dep. Var:   & Employment &       & log Wage \\
+    \midrule
+    Flash Flood 2008 & 0.00733*** &  & 0.01086**\\
+                     & (0.00475) &  & (0.00475)\\
+    Flash Flood 2009 & -0.24444*** &  & 0.04702***\\
+                     & (0.00794) &  & (0.00794)\\
+    Flash Flood 2010 & -0.12151*** &  & 0.02872**\\
+                     & (0.00591) &  & (0.00591)\\
+    Flash Flood 2011 & -0.11266*** &  & 0.05975***\\
+                     & (0.00605) &  & (0.00605)\\
+    Flash Flood 2012 & -0.08610*** &  & 0.06244***\\
+                     & (0.00590) &  & (0.00590)\\
+    \midrule
+    Observations & 45300 &  & 38560\\
+    Census Tract Trend & Yes &  & Yes\\
+    \bottomrule
+    \end{tabular}%
+    \begin{tablenotes}[flushleft]
+    \item \small Notes: This table uses the main workers sample restrictions and additionally applies \texttt{remove\_treat\_control\_mob = TRUE}. Only the trend specification is reported (Census tract trend enabled). Panel A uses a single post-treatment dummy; Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \end{tablenotes}
+  \end{threeparttable}
+  }
+\end{table}

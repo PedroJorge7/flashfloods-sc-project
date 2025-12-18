@@ -1,0 +1,42 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{Robustness: Removing workers linked to establishments that switch between treated and control areas}
+  \label{tab:workers_remove_mob_treat_control}
+  \scalebox{0.75}{
+  \begin{threeparttable}
+    \begin{tabular}{l c p{0.55cm} c p{0.30cm} c p{0.55cm} c p{0.30cm} c p{0.30cm} c}
+    \toprule
+          & (1)   &       & (2)   &       & (3)   &       & (4)   &       & (5)   &       & (6) \\
+ \cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}\cmidrule(lr){10-10}\cmidrule(lr){12-12}
+  \multicolumn{12}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+ Dep. Var: & Employment & & Employment & & log Wage & & log Wage & & Migration & & Migration \\
+    \midrule
+    Flash Flood Post & -0.14249*** & & -0.14282*** & & 0.04708*** & & 0.04686*** & & 0.01373 & & 0.01359\\
+                     & (0.01225) & & (0.01230) & & (0.01225) & & (0.01230) & & (0.01225) & & (0.01230)\\
+    Observations & 45300 & & 45300 & & 38560 & & 38560 & & 39524 & & 39524\\
+    Census Tract Trend & No & & Yes & & No & & Yes & & No & & Yes\\
+  \midrule
+  \multicolumn{12}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+ Dep. Var: & Employment & & Employment & & log Wage & & log Wage & & Migration & & Migration \\
+    \midrule
+    Flash Flood 2008 & 0.00734*** & & 0.00733*** & & 0.01078** & & 0.01086** & & 0.02289*** & & 0.02291***\\
+                     & (0.00475) & & (0.00475) & & (0.00475) & & (0.00475) & & (0.00475) & & (0.00475)\\
+    Flash Flood 2009 & -0.24410*** & & -0.24444*** & & 0.04723*** & & 0.04702*** & & 0.04800*** & & 0.04787***\\
+                     & (0.00791) & & (0.00794) & & (0.00791) & & (0.00794) & & (0.00791) & & (0.00794)\\
+    Flash Flood 2010 & -0.12118*** & & -0.12151*** & & 0.02890** & & 0.02872** & & -0.00192 & & -0.00204\\
+                     & (0.00588) & & (0.00591) & & (0.00588) & & (0.00591) & & (0.00588) & & (0.00591)\\
+    Flash Flood 2011 & -0.11232*** & & -0.11266*** & & 0.05993*** & & 0.05975*** & & 0.01320* & & 0.01308*\\
+                     & (0.00601) & & (0.00605) & & (0.00601) & & (0.00605) & & (0.00601) & & (0.00605)\\
+    Flash Flood 2012 & -0.08577*** & & -0.08610*** & & 0.06264*** & & 0.06244*** & & 0.01413** & & 0.01400**\\
+                     & (0.00585) & & (0.00590) & & (0.00585) & & (0.00590) & & (0.00585) & & (0.00590)\\
+    \midrule
+    Observations & 45300 & & 45300 & & 38560 & & 38560 & & 39524 & & 39524\\
+    Census Tract Trend & No & & Yes & & No & & Yes & & No & & Yes\\
+    \bottomrule
+    \end{tabular}%
+    \begin{tablenotes}[flushleft]
+    \item \small Notes: This table reproduces the main workers specification adding the robustness restriction \texttt{remove\_treat\_control\_mob = TRUE}, which removes workers linked to establishments that switch between treated and control rings over time. Panel A uses a single post-treatment dummy; Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. Worker and year fixed effects are included as in the main setup. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \end{tablenotes}
+  \end{threeparttable}
+  }
+\end{table}
