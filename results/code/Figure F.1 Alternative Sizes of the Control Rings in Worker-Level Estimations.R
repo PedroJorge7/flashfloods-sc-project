@@ -11,6 +11,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(MatchIt)
+library(fixest)
 
 OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -22,18 +23,16 @@ source("./results/code/read_functions.R")
 # ---------------------------------------------------------
 control_specs <- list(
   "40-70"  = c(40, 70),
-  "50-80"  = c(50, 80),
   "30-80"  = c(30, 80),
   "50-100" = c(50, 100)
 )
 
 # ORDEM OBRIGATÓRIA (a que você pediu)
-radius_levels <- c("40-70 km", "50-80 km", "30-80 km", "50-100 km")
+radius_levels <- c("40-70 km",  "30-80 km", "50-100 km")
 
 # Paleta (EXATAMENTE)
 control_colors <- c(
-  "40-70 km"  = "#FEE0D2",
-  "50-80 km"  = "#FCBBA1",
+  "40-70 km"  = "#FCBBA1",
   "30-80 km"  = "#FB6A4A",
   "50-100 km" = "#CB181D"
 )

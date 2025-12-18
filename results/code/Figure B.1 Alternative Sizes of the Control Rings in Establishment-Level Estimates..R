@@ -85,7 +85,6 @@ ring_diagnostics <- function(df, ring_label) {
 # ---------------------------------------------------------
 control_specs <- list(
   "40-70 km"  = list(lower = 40, upper = 70),
-  "50-80 km"  = list(lower = 50, upper = 80),
   "30-80 km"  = list(lower = 30, upper = 80),
   "50-100 km" = list(lower = 50, upper = 100)
 )
@@ -363,13 +362,12 @@ all_results <- all_results %>%
     ),
     Control_Ring = factor(
       Control_Ring,
-      levels = c("40-70 km", "50-80 km", "30-80 km", "50-100 km")
+      levels = c("40-70 km", "30-80 km", "50-100 km")
     )
   )
 
 ring_colors <- c(
   "40-70 km"  = "#FEE0D2",
-  "50-80 km"  = "#FCBBA1",
   "30-80 km"  = "#FB6A4A",
   "50-100 km" = "#CB181D"
 )
