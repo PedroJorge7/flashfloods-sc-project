@@ -10,7 +10,7 @@ library(dplyr)
 library(readr)
 library(MatchIt)
 
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 
 # -------------------------------------------------------------------
 # 0) Carregar dados + filtros (EXATAMENTE como você definiu)

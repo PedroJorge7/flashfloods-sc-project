@@ -17,7 +17,7 @@ library(MatchIt)
 OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
 # Paleta padrão (NOMES = níveis do radius)

@@ -28,7 +28,7 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
 # ---------------------------------------------------------
 # 2) Funções auxiliares do projeto
 # ---------------------------------------------------------
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
 # 3) Rodar outputs (TREND ONLY)

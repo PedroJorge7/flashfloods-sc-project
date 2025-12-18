@@ -1,5 +1,5 @@
 ############################################################
-## Event Study (Workers) – usando output_empregados + Aux.R
+## Event Study (Workers) – usando output_empregados
 ## - NÃO usa .dta do Stata
 ## - NÃO tem migration
 ## - Plota com cowplot e salva PNG
@@ -64,7 +64,7 @@ library(MatchIt)
 # ---------------------------------------------------------
 # 1) Carrega Aux (output_empregados + event_study_plot)
 # ---------------------------------------------------------
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
 # 2) Dados + filtros (mesma lógica que você fixou)

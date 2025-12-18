@@ -9,7 +9,7 @@ rm(list = ls())
 
 library(dplyr)
 
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------

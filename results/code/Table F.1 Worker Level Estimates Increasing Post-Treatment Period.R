@@ -29,7 +29,7 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
 # -------------------------------------------------------------------
 # 2) Carrega funções (output_empregados + gen_table)
 # -------------------------------------------------------------------
-source("./results/code/Aux.R")
+source("./results/code/read_functions.R")
 
 # -------------------------------------------------------------------
 # 3) Outputs (TREND ONLY)
