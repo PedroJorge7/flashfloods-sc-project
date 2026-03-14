@@ -11,6 +11,7 @@ library(dplyr)
 library(cowplot)
 library(ggplot2)
 library(MatchIt)
+library(fixest)
 
 # ---------------------------------------------------------
 # Helper: mesmo ylim para Employment e Wage (captura os DOIS)
