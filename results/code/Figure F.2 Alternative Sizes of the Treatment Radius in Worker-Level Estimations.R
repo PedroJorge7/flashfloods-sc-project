@@ -1,10 +1,10 @@
-############################################################
-## Robustez 2 – Mudanças no Raio de Tratamento (Workers)
-## Tratamentos: 2.5 7.5 17.5 22.5 30 (control fixo 50–80)
-## Saída: ./results/analysis/change_treatment_empregados.png
+﻿############################################################
+## Figure F.2 - Alternative Sizes of the Treatment Radius in Worker-Level Estimations
+## Tratamentos: 2.5 7.5 17.5 22.5 30 (control fixo 50â€“80)
+## SaÃ­da: ./results/analysis/change_treatment_empregados.png
 ## AJUSTES:
-##  - Cores padrão (paleta nomeada pelos níveis do radius)
-##  - Painéis em apenas 1 linha (ggarrange nrow = 1)
+##  - Cores padrÃ£o (paleta nomeada pelos nÃ­veis do radius)
+##  - PainÃ©is em apenas 1 linha (ggarrange nrow = 1)
 ############################################################
 
 rm(list = ls())
@@ -20,7 +20,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
-# Paleta padrão (NOMES = níveis do radius)
+# Paleta padrÃ£o (NOMES = nÃ­veis do radius)
 # ---------------------------------------------------------
 treat_colors <- c(
   "0-2.5 km"  = "#FEE0D2",
@@ -38,7 +38,7 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# Helper: garante tipos numéricos (evita plot “sumir”)
+# Helper: garante tipos numÃ©ricos (evita plot â€œsumirâ€)
 # ---------------------------------------------------------
 clean_output_for_plot <- function(df) {
   df %>%
@@ -53,7 +53,7 @@ clean_output_for_plot <- function(df) {
 }
 
 # ---------------------------------------------------------
-# Rodar outputs por raio de TRATAMENTO (control fixo 50–80)
+# Rodar outputs por raio de TRATAMENTO (control fixo 50â€“80)
 # ---------------------------------------------------------
 output_empregados_2_5  <- output_empregados(dados, 0,  2.5, 50, 80, trend = TRUE)
 output_empregados_7_5  <- output_empregados(dados, 0,  7.5, 50, 80, trend = TRUE)
@@ -77,10 +77,10 @@ output <- bind_rows(
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-if (nrow(output) == 0) stop("Robustez 2: `output` ficou vazio depois dos filtros/conversões.")
+if (nrow(output) == 0) stop("Robustez 2: `output` ficou vazio depois dos filtros/conversÃµes.")
 
 # ---------------------------------------------------------
-# Plot (comparando raios no MESMO painel, com cores padrão)
+# Plot (comparando raios no MESMO painel, com cores padrÃ£o)
 # ---------------------------------------------------------
 plot_one <- function(reg) {
   dd <- output %>% filter(Regression == reg)
@@ -102,7 +102,7 @@ plot_one <- function(reg) {
 
 reg_names <- unique(output$Regression)
 
-# se tiver emp/wage, foca neles (senão plota tudo que existir)
+# se tiver emp/wage, foca neles (senÃ£o plota tudo que existir)
 keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
 if (length(keep) > 0) reg_names <- keep
 

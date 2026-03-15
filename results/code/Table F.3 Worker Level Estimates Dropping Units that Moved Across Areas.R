@@ -1,7 +1,7 @@
-############################################################
-## Robustez 5 (Workers) — TREND ONLY, sem Migration
+﻿############################################################
+## Table F.3 - Worker Level Estimates Dropping Units that Moved Across Areas
+## TREND ONLY, sem Migration
 ## - remove_treat_control_mob = TRUE
-## - trend = TRUE (somente)
 ## - Outcomes na tabela: Employment e log.Wage
 ############################################################
 
@@ -20,7 +20,7 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# 1) Rodar APENAS tendência + filtro de mobilidade treat/control
+# 1) Rodar APENAS tendÃªncia + filtro de mobilidade treat/control
 # ---------------------------------------------------------
 output_trend <- output_empregados(
   dados, 0, 12.5, 50, 80,
@@ -30,7 +30,7 @@ output_trend <- output_empregados(
 
 tab_trend <- as.data.frame(gen_table(output_trend), stringsAsFactors = FALSE)
 
-# Mantém só o que interessa (ignora Migration mesmo que venha no gen_table)
+# MantÃ©m sÃ³ o que interessa (ignora Migration mesmo que venha no gen_table)
 need_cols <- c("term", "Employment", "log.Wage")
 miss <- setdiff(need_cols, names(tab_trend))
 if (length(miss) > 0) stop(paste0("Faltam colunas em `tab_trend`: ", paste(miss, collapse = ", ")))
@@ -55,8 +55,8 @@ make_workers_tex_trend_only_2cols <- function(
   
   get_pair <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
-    if (length(i) == 0) stop(paste0("Termo não encontrado em `tab`: '", term_value, "'"))
-    if (i == nrow(body)) stop(paste0("Termo '", term_value, "' está na última linha; faltou a linha do SE."))
+    if (length(i) == 0) stop(paste0("Termo nÃ£o encontrado em `tab`: '", term_value, "'"))
+    if (i == nrow(body)) stop(paste0("Termo '", term_value, "' estÃ¡ na Ãºltima linha; faltou a linha do SE."))
     list(est = body[i, ], se = body[i + 1, ])
   }
   
@@ -123,3 +123,4 @@ make_workers_tex_trend_only_2cols <- function(
 }
 
 make_workers_tex_trend_only_2cols(tab)
+

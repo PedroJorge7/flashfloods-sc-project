@@ -1,10 +1,10 @@
-###############################################################################
-# Table A.11 – The Effect of the Flash Floods on Exposed Workers (TREND ONLY)
-# (universo de trabalhadores expostos na área tratada com matching)
+﻿###############################################################################
+# Table E.1 - The Effect of the Flash Floods on Exposed Workers (TREND ONLY)
+# (universo de trabalhadores expostos na Ã¡rea tratada com matching)
 # - Usa output_empregados(..., exposed_workers = TRUE, trend = TRUE)
 # - SEM migration
 # - Gera LaTeX direto do objeto `tab` (sem XLSX)
-# - Salva em: ./results/analysis/Tab_A11_Effect_Exposed_Workers.tex
+# - Salva em: ./results/analysis/Tab_E1_Effect_Exposed_Workers.tex
 ###############################################################################
 
 rm(list = ls())
@@ -19,14 +19,14 @@ OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Dados + filtros (seu padrão)
+# 1) Dados + filtros (seu padrÃ£o)
 # ---------------------------------------------------------
 dados <- readRDS("./data/workers_clean_data.rds") %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# 2) Funções auxiliares do projeto
+# 2) FunÃ§Ãµes auxiliares do projeto
 # ---------------------------------------------------------
 source("./results/code/read_functions.R")
 
@@ -54,7 +54,7 @@ if (length(miss_cols) > 0) {
 }
 
 # ---------------------------------------------------------
-# 5) Função: gerar LaTeX no formato do principal (TREND ONLY, 2 colunas)
+# 5) FunÃ§Ã£o: gerar LaTeX no formato do principal (TREND ONLY, 2 colunas)
 # ---------------------------------------------------------
 make_tex_from_table_trend_only <- function(tab,
                                            outfile,
@@ -72,7 +72,7 @@ make_tex_from_table_trend_only <- function(tab,
   get_pair_safe <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
     if (length(i) == 0 || i == nrow(body)) {
-      # SAFE: se não achar termo ou faltar linha do SE, devolve vazio
+      # SAFE: se nÃ£o achar termo ou faltar linha do SE, devolve vazio
       est <- data.frame(term = term_value, Employment_trend = "", log.Wage_trend = "", stringsAsFactors = FALSE)
       se  <- data.frame(term = "",        Employment_trend = "", log.Wage_trend = "", stringsAsFactors = FALSE)
       return(list(est = est, se = se))
@@ -139,7 +139,7 @@ make_tex_from_table_trend_only <- function(tab,
     "    \\bottomrule",
     "    \\end{tabular}%",
     "    \\begin{tablenotes}[flushleft]",
-    "    \\item \\small \\textit{Notes:} This table reports worker-level difference-in-differences estimates for exposed workers (treatment area universe with matching). The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008–2012), with 2007 as the omitted year. Worker and year fixed effects are included in all specifications. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
+    "    \\item \\small \\textit{Notes:} This table reports worker-level difference-in-differences estimates for exposed workers (treatment area universe with matching). The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008-2012), with 2007 as the omitted year. Worker and year fixed effects are included in all specifications. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
     "    \\end{tablenotes}",
     " \\end{threeparttable}",
     " }",
@@ -155,6 +155,7 @@ make_tex_from_table_trend_only <- function(tab,
 # ---------------------------------------------------------
 make_tex_from_table_trend_only(
   tab     = tab,
-  outfile = file.path(OUT_DIR, "Tab_A11_Effect_Exposed_Workers.tex"),
+  outfile = file.path(OUT_DIR, "Tab_E1_Effect_Exposed_Workers.tex"),
   caption = "The Effect of the Flash Floods on Exposed Workers"
 )
+

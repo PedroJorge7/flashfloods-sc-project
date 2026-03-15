@@ -1,9 +1,9 @@
-############################################################
-## Robustez (Estabelecimentos) — Remover firmas que mudam
-## entre tratado/controle ao longo do painel (treat_max!=treat_min)
-## - Apenas especificação COM tendência (Census tract trend)
+﻿############################################################
+## Table B.8 - Establishment-Level Estimates Dropping Units that Moved Across Areas
+## Arquivo mantido neste caminho legado, mas o conteudo pertence ao apendice B.
+## - Apenas especificaÃ§Ã£o COM tendÃªncia (Census tract trend)
 ## - Outcomes: Closure (morte) e Relocation (reloc_tract_tminus1)
-## - Mesma construção do treat_B da Tabela 3
+## - Mesma construÃ§Ã£o do treat_B da Tabela 3
 ############################################################
 
 rm(list = ls())
@@ -16,7 +16,7 @@ library(broom)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Load (não corta antes de construir t-1)
+# 1) Load (nÃ£o corta antes de construir t-1)
 # ---------------------------------------------------------
 data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
   filter(year >= 2003) %>%
@@ -25,7 +25,7 @@ data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
 stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract") %in% names(data)))
 
 # ---------------------------------------------------------
-# 2) Construção do tratamento (igual seu script principal)
+# 2) ConstruÃ§Ã£o do tratamento (igual seu script principal)
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -78,7 +78,7 @@ data <- data %>%
   ) %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# regra do 1º ano do id_estab
+# regra do 1Âº ano do id_estab
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -89,7 +89,7 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# sua regra: se morte é NA, reloc também NA (e define NA -> 0 antes disso, como no seu script)
+# sua regra: se morte Ã© NA, reloc tambÃ©m NA (e define NA -> 0 antes disso, como no seu script)
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1), 0, reloc_tract_tminus1),
@@ -97,7 +97,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Dummies + tendência (igual seu script)
+# 3) Dummies + tendÃªncia (igual seu script)
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -143,7 +143,7 @@ data_tab3 <- data %>%
   select(-treat_max, -treat_min)
 
 # ---------------------------------------------------------
-# 5) Regressões (APENAS COM tendência)
+# 5) RegressÃµes (APENAS COM tendÃªncia)
 # ---------------------------------------------------------
 # Panel A (agg)
 mA_closure <- feols(morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
@@ -167,7 +167,7 @@ mB_reloc   <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars, " | 
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
   out <- tt[tt$term == term, c("estimate","std.error","p.value")]
-  if (nrow(out) == 0) stop(paste("Termo não encontrado:", term))
+  if (nrow(out) == 0) stop(paste("Termo nÃ£o encontrado:", term))
   out
 }
 stars <- function(p) ifelse(p < 0.01,"***", ifelse(p < 0.05,"**", ifelse(p < 0.1,"*","")))
@@ -183,7 +183,7 @@ lines <- c(
   "\\begin{table}[htb]",
   "  \\centering",
   "  \\tabcaption{Robustness: Removing establishments that switch between treated and control areas}",
-  "  \\label{tab:A1_remove_mobility_estab}",
+  "  \\label{tab:B8_remove_mobility_estab}",
   "  \\scalebox{0.80}{",
   "  \\begin{threeparttable}",
   "    \\begin{tabular}{l c p{0.35cm} c}",
@@ -236,5 +236,8 @@ lines <- c(lines,
            "\\end{table}"
 )
 
-outfile <- "./results/analysis/Tab_B5_Removing_Mobility_TreatControl_Establishments.tex"
+outfile <- "./results/analysis/Tab_B8_Removing_Mobility_TreatControl_Establishments.tex"
 writeLines(lines, outfile)
+
+
+

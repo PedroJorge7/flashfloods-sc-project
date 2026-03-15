@@ -1,20 +1,20 @@
-############################################################
-## Table A.x – Removing ECP controls (Firm estimations)
-## - MESMA estratégia do resultado principal (Table 3):
-##   * Outcomes: morte (closure) e relocation (DEFINIÇÃO ANTIGA)
-##   * DiD agregado (treat_B_agg) + DiD com dummies anuais (2008–2012)
+﻿############################################################
+## Table B.4 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
+## - MESMA estratÃ©gia do resultado principal (Table 3):
+##   * Outcomes: morte (closure) e relocation (DEFINIÃ‡ÃƒO ANTIGA)
+##   * DiD agregado (treat_B_agg) + DiD com dummies anuais (2008â€“2012)
 ##   * FE: id_estab + year
 ##   * Census tract trend: i.treat_trend#c.code_tract  ->  treat_trend[code_tract_num]
 ##   * Cluster 2-way: id_estab + year
 ##
-## - Diferença desta robustez:
-##   * Remove observações do grupo de controle (treat_B==0) quando
-##     a firma está em municípios que decretaram calamidade pública (ECP).
+## - DiferenÃ§a desta robustez:
+##   * Remove observaÃ§Ãµes do grupo de controle (treat_B==0) quando
+##     a firma estÃ¡ em municÃ­pios que decretaram calamidade pÃºblica (ECP).
 ##     (equivalente ao: if !(ecp==1 & treat_B==0) no Stata)
 ##
-## - Relocation (definição antiga): mover_ano_mun
+## - Relocation (definiÃ§Ã£o antiga): mover_ano_mun
 ##
-## - Salva LaTeX em: ./results/analysis/Table_Ax_Removing_ECP.tex
+## - Salva LaTeX em: ./results/analysis/Table_B4_Removing_ECP.tex
 ############################################################
 
 rm(list = ls())
@@ -30,7 +30,7 @@ library(broom)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Load data (não corta antes; aqui não precisamos lead, mas mantém padrão)
+# 1) Load data (nÃ£o corta antes; aqui nÃ£o precisamos lead, mas mantÃ©m padrÃ£o)
 # ---------------------------------------------------------
 data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
   filter(year >= 2003) %>%
@@ -57,7 +57,7 @@ data <- data %>%
   mutate(
     morte         = as.numeric(haven::zap_labels(morte)),
     mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
-    # Stata: outcomes viram missing quando treat_B é missing
+    # Stata: outcomes viram missing quando treat_B Ã© missing
     morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
   # Stata: bysort id_estab (year): replace treat_B = treat_B[_n-1]
@@ -81,9 +81,9 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) ECP (municípios calamidade pública) + filtro Stata:
+# 2.1) ECP (municÃ­pios calamidade pÃºblica) + filtro Stata:
 #      remove somente quando (ecp==1 & treat_B==0)
-#      (treat_B NA NÃO deve excluir)
+#      (treat_B NA NÃƒO deve excluir)
 # ---------------------------------------------------------
 ecp_muns <- c(
   420220, 420240, 420290, 420320, 420590, 420710, 420820,
@@ -109,7 +109,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Agregado pós + dummies anuais + trend control
+# 3) Agregado pÃ³s + dummies anuais + trend control
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -143,14 +143,14 @@ for (y in 2008:2012) {
 }
 
 # ---------------------------------------------------------
-# 4) Janela da tabela (2003–2012) + aplicar remoção ECP
+# 4) Janela da tabela (2003â€“2012) + aplicar remoÃ§Ã£o ECP
 # ---------------------------------------------------------
 data_tab <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   filter(!remove_ecp)
 
 # ---------------------------------------------------------
-# 5) Estimar modelos (igual Table 3) – SOMENTE:
+# 5) Estimar modelos (igual Table 3) â€“ SOMENTE:
 #    morte (closure) e mover_ano_mun (relocation antiga)
 # ---------------------------------------------------------
 outcomes <- c("morte", "mover_ano_mun")
@@ -196,12 +196,12 @@ mods_B <- list(
 )
 
 # ---------------------------------------------------------
-# 6) Helpers (igual seu padrão)
+# 6) Helpers (igual seu padrÃ£o)
 # ---------------------------------------------------------
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
   out <- tt[tt$term == term, c("estimate", "std.error", "p.value")]
-  if (nrow(out) == 0) stop(paste("Termo não encontrado:", term))
+  if (nrow(out) == 0) stop(paste("Termo nÃ£o encontrado:", term))
   out
 }
 
@@ -262,7 +262,7 @@ lines <- c(lines,
            "    \\midrule"
 )
 
-# Panel B: 2008–2012
+# Panel B: 2008â€“2012
 years_evt <- 2008:2012
 terms_evt <- paste0("treat_B_", years_evt)
 
@@ -301,4 +301,5 @@ lines <- c(
 # ---------------------------------------------------------
 # 8) Save LaTeX
 # ---------------------------------------------------------
-writeLines(lines, "./results/analysis/Table_Ax_Removing_ECP.tex")
+writeLines(lines, "./results/analysis/Table_B4_Removing_ECP.tex")
+

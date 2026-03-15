@@ -1,5 +1,5 @@
-############################################################
-## Tab_B6 – Firm estimations (R version)
+﻿############################################################
+## Table B.6 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
 ## Robustness: Remove municipalities that declared public calamity in 2011 (ECP 2011)
 ## SAME STRATEGY as main result (Table 3), BUT TREND-ONLY:
 ##   - Outcomes: Closure (morte) and Relocation (reloc_tract_tminus1)
@@ -110,7 +110,7 @@ data <- data %>%
   ) %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# 1º ano observado: se reloc==1 -> vira 0 (IGUAL Table 3)
+# 1Âº ano observado: se reloc==1 -> vira 0 (IGUAL Table 3)
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -161,7 +161,7 @@ for (y in 2008:2012) {
 }
 
 # ---------------------------------------------------------
-# 4) Restrict to 2003–2012 + remove ECP 2011
+# 4) Restrict to 2003â€“2012 + remove ECP 2011
 # ---------------------------------------------------------
 data_tab <- data %>% filter(year >= 2003 & year <= 2012)
 data_tab_ecp <- data_tab %>% filter(ecp_2011 == 0)
@@ -204,7 +204,7 @@ mods_B <- list(panelB_tr[["morte"]], panelB_tr[["reloc_tract_tminus1"]])
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
   out <- tt[tt$term == term, c("estimate", "std.error", "p.value")]
-  if (nrow(out) == 0) stop(paste("Termo não encontrado:", term))
+  if (nrow(out) == 0) stop(paste("Termo nÃ£o encontrado:", term))
   out[1, , drop = FALSE]
 }
 
@@ -265,7 +265,7 @@ lines <- c(lines,
            "    \\midrule"
 )
 
-# Panel B: 2008–2012
+# Panel B: 2008â€“2012
 years_evt <- 2008:2012
 terms_evt <- paste0("treat_B_", years_evt)
 

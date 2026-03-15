@@ -1,20 +1,20 @@
-# ============================================================================
-# Table 2 – Definition of Treatment Radius
-#           Effects of Flooding using Different Treatment Bands
-#           (replicando o Stata, com formatação LaTeX customizada)
+﻿# ============================================================================
+# Table A.1 - Definition of Treatment Radius
+#             Effects of Flooding on Relocation
+#           (replicando o Stata, com formataÃ§Ã£o LaTeX customizada)
 #
-# AJUSTE: "nova definição de movimentação" = reloc_tract_tminus1 (Census Tract, t-1)
+# AJUSTE: "nova definiÃ§Ã£o de movimentaÃ§Ã£o" = reloc_tract_tminus1 (Census Tract, t-1)
 # - Igual ao seu Figure 4:
 #     diff_tract(t) = 1 se code_tract(t) != code_tract(t-1)
-#     reloc_tract_tminus1(t) = lead(diff_tract, 1)  # mudança entre t e t+1
-#     + A REGRA QUE VOCÊ EXIGIU:
+#     reloc_tract_tminus1(t) = lead(diff_tract, 1)  # mudanÃ§a entre t e t+1
+#     + A REGRA QUE VOCÃŠ EXIGIU:
 #         group_by(id_estab) |> mutate(
 #           reloc_tract_tminus1 = ifelse(year == min(year, na.rm=TRUE) & reloc_tract_tminus1==1, 0, reloc_tract_tminus1)
 #         )
 # - Usa reloc_tract_tminus1 no forward-fill do treat_B_temp (Stata-style)
 # - Outcome da Tabela 2: Closure (morte_temp)
 # - Cluster 2-way: id_estab + year
-# - Saída: ./results/analysis/Tab_02_Definition_Treatment_Radius.tex
+# - SaÃ­da: ./results/analysis/Tab_A1_Definition_Treatment_Radius_Relocation.tex
 # ============================================================================
 
 rm(list = ls())
@@ -29,16 +29,16 @@ library(broom)
 # ---------------------------------------------------------------------------
 OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-OUTFILE <- file.path(OUT_DIR, "Tab_02_Definition_Treatment_Radius_relocation.tex")
+OUTFILE <- file.path(OUT_DIR, "Tab_A1_Definition_Treatment_Radius_Relocation.tex")
 
 # ---------------------------------------------------------------------------
-# 1) Base crua + recorte 2003–2012
+# 1) Base crua + recorte 2003â€“2012
 # ---------------------------------------------------------------------------
 dados_raw <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
   filter(year >= 2003, year <= 2012) %>%
   arrange(id_estab, year) %>%
   mutate(
-    morte_orig = as.numeric(haven::zap_labels(morte)) # garante numérico
+    morte_orig = as.numeric(haven::zap_labels(morte)) # garante numÃ©rico
   )
 
 stopifnot(all(c("id_estab","year","dist_flood","code_tract","morte_orig") %in% names(dados_raw)))
@@ -47,13 +47,13 @@ stopifnot(all(c("id_estab","year","dist_flood","code_tract","morte_orig") %in% n
 # 2) Bandas de tratamento (como na tabela do paper)
 # ---------------------------------------------------------------------------
 bands <- list(
-  "0–2.5 km"   = c(NA,   2.5),
-  "2.5–5 km"   = c(2.5,  5),
-  "5–7.5 km"   = c(5,    7.5),
-  "7.5–10 km"  = c(7.5, 10),
-  "10–12.5 km" = c(10,  12.5),
-  "12.5–15 km" = c(12.5,15),
-  "15–17.5 km" = c(15,  17.5)
+  "0-2.5 km"   = c(NA,   2.5),
+  "2.5-5 km"   = c(2.5,  5),
+  "5-7.5 km"   = c(5,    7.5),
+  "7.5-10 km"  = c(7.5, 10),
+  "10-12.5 km" = c(10,  12.5),
+  "12.5-15 km" = c(12.5,15),
+  "15-17.5 km" = c(15,  17.5)
 )
 
 treat_years <- 2008:2012
@@ -62,7 +62,7 @@ models  <- list()
 col_idx <- 1L
 
 # ---------------------------------------------------------------------------
-# 3) Loop sobre bandas – treat/control + reloc_tract_tminus1 + fechamento
+# 3) Loop sobre bandas â€“ treat/control + reloc_tract_tminus1 + fechamento
 # ---------------------------------------------------------------------------
 for (b_name in names(bands)) {
   
@@ -74,7 +74,7 @@ for (b_name in names(bands)) {
     group_by(id_estab) %>%
     mutate(
       # ---------------------------------------------------
-      # (A) Banda de tratamento vs controle 50–80 km
+      # (A) Banda de tratamento vs controle 50â€“80 km
       # ---------------------------------------------------
       treat_B_temp = case_when(
         is.na(lower_b)  & dist_flood <= upper_b                        ~ 1,
@@ -100,10 +100,10 @@ for (b_name in names(bands)) {
         TRUE                      ~ 0
       ),
       
-      reloc_tract_tminus1 = dplyr::lead(diff_tract, 1)  # NA no último ano do id_estab
+      reloc_tract_tminus1 = dplyr::lead(diff_tract, 1)  # NA no Ãºltimo ano do id_estab
     ) %>%
     # ---------------------------------------------------
-  # (C.1) A REGRA QUE VOCÊ EXIGIU (exatamente):
+  # (C.1) A REGRA QUE VOCÃŠ EXIGIU (exatamente):
   # group_by(id_estab) |> mutate(reloc_tract_tminus1 = ifelse(year == min(year, na.rm=TRUE) & reloc_tract_tminus1==1,0,reloc_tract_tminus1))
   # ---------------------------------------------------
   mutate(
@@ -120,9 +120,9 @@ for (b_name in names(bands)) {
     morte_temp = if_else(is.na(treat_B_temp), NA_real_, morte_temp)
   ) %>%
     # ---------------------------------------------------
-  # (E) Cortes de amostra (igual seu padrão):
-  # - se treat_B_temp é NA => reloc_tract_tminus1 = NA
-  # - se morte_temp é NA   => reloc_tract_tminus1 = NA
+  # (E) Cortes de amostra (igual seu padrÃ£o):
+  # - se treat_B_temp Ã© NA => reloc_tract_tminus1 = NA
+  # - se morte_temp Ã© NA   => reloc_tract_tminus1 = NA
   # ---------------------------------------------------
   mutate(
     reloc_tract_tminus1 = if_else(is.na(treat_B_temp), NA_real_, as.numeric(reloc_tract_tminus1)),
@@ -143,7 +143,7 @@ for (b_name in names(bands)) {
       tb
     }
   ) %>%
-    # reimpõe NA fora do sample depois do fill
+    # reimpÃµe NA fora do sample depois do fill
     mutate(
       morte_temp          = if_else(is.na(treat_B_temp), NA_real_, morte_temp),
       reloc_tract_tminus1 = if_else(is.na(treat_B_temp), NA_real_, reloc_tract_tminus1),
@@ -152,7 +152,7 @@ for (b_name in names(bands)) {
     ungroup() %>%
     select(-ct, -ct_lag, -diff_tract)
   
-  # dummies ano-específicas (2003–2012)
+  # dummies ano-especÃ­ficas (2003â€“2012)
   for (y in 2003:2012) {
     var <- paste0("treat_B_temp_", y)
     temp[[var]] <- dplyr::case_when(
@@ -162,7 +162,7 @@ for (b_name in names(bands)) {
     )
   }
   
-  # regressão: Flash Flood 2008–2012, FE id_estab + year
+  # regressÃ£o: Flash Flood 2008â€“2012, FE id_estab + year
   rhs <- paste0("treat_B_temp_", treat_years, collapse = " + ")
   fml <- as.formula(paste0("morte_temp ~ ", rhs, " | id_estab + year"))
   
@@ -230,7 +230,7 @@ dep_row  <- make_row("  Dep. Var:", dep_vals)
 
 treat_row <- make_row("Treatment Group", bands_labels)
 
-ctrl_vals <- rep("50–80 km", length(models))
+ctrl_vals <- rep("50-80 km", length(models))
 ctrl_row  <- make_row("Control Group", ctrl_vals)
 
 flash_rows <- c()
@@ -289,3 +289,6 @@ tex_lines <- c(
 )
 
 writeLines(tex_lines, OUTFILE)
+
+
+

@@ -1,7 +1,7 @@
-# ============================================================================
-# Figure 6: Alternative Sizes of the Treatment Radius – Establishment Level
+﻿# ============================================================================
+# Figure B.2: Alternative Sizes of the Treatment Radius in Establishment-Level Estimates
 #   AJUSTE: Relocation = reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
-#   IMPORTANTE: reloc_tract_tminus1 é construído ANTES do corte 2003–2012
+#   IMPORTANTE: reloc_tract_tminus1 Ã© construÃ­do ANTES do corte 2003â€“2012
 # ============================================================================
 
 rm(list = ls())
@@ -15,7 +15,7 @@ library(ggpubr)
 library(broom)
 
 # ---------------------------------------------------------
-# Helper: code_tract precisa ser numérico p/ varying slopes (fixest)
+# Helper: code_tract precisa ser numÃ©rico p/ varying slopes (fixest)
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -24,7 +24,7 @@ make_tract_num <- function(x) {
   x_num <- suppressWarnings(as.numeric(x_chr))
   bad   <- !is.na(x_chr) & is.na(x_num)
   
-  # se muita coisa não parseia, usa codificação por fator (mantém todos)
+  # se muita coisa nÃ£o parseia, usa codificaÃ§Ã£o por fator (mantÃ©m todos)
   if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) {
     x_num <- as.numeric(factor(x_chr))
   }
@@ -57,7 +57,7 @@ data <- data %>%
       TRUE                      ~ 0
     ),
     
-    reloc_tract_tminus1 = lead(diff_tract, 1)  # NA no último ano do estab
+    reloc_tract_tminus1 = lead(diff_tract, 1)  # NA no Ãºltimo ano do estab
   ) %>%
   ungroup() %>%
   select(-ct, -ct_lag, -diff_tract) %>%
@@ -73,14 +73,14 @@ data <- data %>%
          reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1))
 
 # ---------------------------------------------------------
-# 2) AGORA sim: manter somente 2003–2012
+# 2) AGORA sim: manter somente 2003â€“2012
 # ---------------------------------------------------------
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 3) Construção de tratamento principal (igual Tabela 3 / Fig. 5)
+# 3) ConstruÃ§Ã£o de tratamento principal (igual Tabela 3 / Fig. 5)
 # ---------------------------------------------------------
 has_new_firm <- "new_firm" %in% names(data)
 
@@ -88,7 +88,7 @@ data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal (0–12.5 km vs 50–80 km)
+    # tratamento principal (0â€“12.5 km vs 50â€“80 km)
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
@@ -100,16 +100,16 @@ data <- data %>%
     reloc_tract_tminus1_orig = reloc_tract_tminus1,
     new_firm_orig           = if (has_new_firm) new_firm else NA_real_
   ) %>%
-  # outcomes = NA onde treat_B é missing (como no Stata)
+  # outcomes = NA onde treat_B Ã© missing (como no Stata)
   mutate(
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if (has_new_firm) if_else(is.na(treat_B), NA_real_, new_firm) else NA_real_
   ) %>%
-  # forward fill de treat_B usando relocação municipal ORIGINAL (como no Stata)
+  # forward fill de treat_B usando relocaÃ§Ã£o municipal ORIGINAL (como no Stata)
   mutate(
     treat_B = {
       tb  <- treat_B
-      mov <- mover_ano_mun  # aqui ainda é o "bruto"
+      mov <- mover_ano_mun  # aqui ainda Ã© o "bruto"
       for (i in seq_along(tb)) {
         if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
           tb[i] <- tb[i - 1]
@@ -121,15 +121,15 @@ data <- data %>%
   # relocation (tract t-1) vira NA onde treat_B continua NA
   mutate(
     reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, reloc_tract_tminus1),
-    # sua regra (amostra alinhada): se closure é NA, relocation também vira NA
+    # sua regra (amostra alinhada): se closure Ã© NA, relocation tambÃ©m vira NA
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1),0,reloc_tract_tminus1),
     reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1),
-    # (mantém igual ao teu padrão)
+    # (mantÃ©m igual ao teu padrÃ£o)
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
-# tendência pós-choque para o slope por tract
+# tendÃªncia pÃ³s-choque para o slope por tract
 data <- data %>%
   mutate(
     treat_trend    = if_else(year >= 2008, 1, 0),
@@ -137,7 +137,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 4) Especificações de raios de tratamento
+# 4) EspecificaÃ§Ãµes de raios de tratamento
 # ---------------------------------------------------------
 radius_specs <- list(
   "0-2.5 km"  = 2.5,
@@ -146,13 +146,13 @@ radius_specs <- list(
   "0-22.5 km" = 22.5
 )
 
-# Só dois outcomes: fechamento e relocation (TRACT t-1)
+# SÃ³ dois outcomes: fechamento e relocation (TRACT t-1)
 outcomes <- c("morte", "reloc_tract_tminus1")
 
 all_results <- data.frame()
 
 # ---------------------------------------------------------
-# 5) Loop sobre raios e outcomes – Post + dummies 2008–2012
+# 5) Loop sobre raios e outcomes â€“ Post + dummies 2008â€“2012
 # ---------------------------------------------------------
 for (rad_lab in names(radius_specs)) {
   
@@ -160,7 +160,7 @@ for (rad_lab in names(radius_specs)) {
   
   temp_data <- data %>%
     mutate(
-      # tratamento alternativo: 0–radius vs 50–80 km
+      # tratamento alternativo: 0â€“radius vs 50â€“80 km
       treat_B_temp = case_when(
         dist_flood <= radius ~ 1,
         dist_flood >= 50 & dist_flood <= 80 ~ 0,
@@ -168,12 +168,12 @@ for (rad_lab in names(radius_specs)) {
       ),
       # sempre partir dos originais
       morte_temp               = morte_orig,
-      mover_ano_mun_temp       = mover_ano_mun_orig,         # só p/ forward fill do treat
+      mover_ano_mun_temp       = mover_ano_mun_orig,         # sÃ³ p/ forward fill do treat
       reloc_tract_tminus1_temp = reloc_tract_tminus1_orig
     ) %>%
     group_by(id_estab) %>%
     mutate(
-      # 1) outcomes = NA onde treat_B_temp é NA
+      # 1) outcomes = NA onde treat_B_temp Ã© NA
       morte_temp               = if_else(is.na(treat_B_temp), NA_real_, morte_temp),
       reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_tract_tminus1_temp),
       
@@ -189,15 +189,15 @@ for (rad_lab in names(radius_specs)) {
         tb
       },
       
-      # 3) só AGORA: relocation vira NA onde treat_B_temp continua NA
+      # 3) sÃ³ AGORA: relocation vira NA onde treat_B_temp continua NA
       reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_tract_tminus1_temp),
       
-      # (alinhamento: se closure é NA, relocation também NA)
+      # (alinhamento: se closure Ã© NA, relocation tambÃ©m NA)
       reloc_tract_tminus1_temp = if_else(is.na(morte_temp), NA_real_, reloc_tract_tminus1_temp)
     ) %>%
     ungroup()
   
-  # dummies 2008–2012 e dummy agregada (Post)
+  # dummies 2008â€“2012 e dummy agregada (Post)
   for (y in 2008:2012) {
     var <- paste0("treat_B_temp_", y)
     temp_data[[var]] <- dplyr::case_when(
@@ -216,7 +216,7 @@ for (rad_lab in names(radius_specs)) {
       )
     )
   
-  # regressões por outcome
+  # regressÃµes por outcome
   for (outcome in outcomes) {
     
     yvar <- paste0(outcome, "_temp")
@@ -243,7 +243,7 @@ for (rad_lab in names(radius_specs)) {
         CI_High          = estimate + 1.96 * std.error
       )
     
-    # (2) modelo com dummies 2008–2012
+    # (2) modelo com dummies 2008â€“2012
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
@@ -273,7 +273,7 @@ for (rad_lab in names(radius_specs)) {
 }
 
 # ---------------------------------------------------------
-# 6) Preparar dados, paleta e painéis A/B
+# 6) Preparar dados, paleta e painÃ©is A/B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(

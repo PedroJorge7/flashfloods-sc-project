@@ -1,5 +1,5 @@
-# ============================================================================
-# Figure 2: The Disaster Coverage Area of the 2008 Santa Catarina Flash Floods
+﻿# ============================================================================
+# Figure 3: The Disaster Coverage Area of the 2008 Santa Catarina Flash Floods
 # ============================================================================
 
 library(dplyr)
@@ -8,6 +8,8 @@ library(ggplot2)
 library(mapview)
 
 rm(list = ls())
+
+dir.create('./results/analysis', recursive = TRUE, showWarnings = FALSE)
 
 # ============================================================================
 # Load map data
@@ -45,7 +47,7 @@ plot <- ggplot() +
 # ============================================================================
 
 ggsave(
-  "Fig_02_Disaster_Coverage_Area.png",
+  "./results/analysis/Fig_03_Disaster_Coverage_Area.png",
   plot,
   dpi = 300,
   width = 12,
@@ -53,5 +55,9 @@ ggsave(
   units = "in"
 )
 
-cat("Figure 2 saved: Fig_02_Disaster_Coverage_Area.png\n")
+cat("Figure 3 saved: ./results/analysis/Fig_03_Disaster_Coverage_Area.png\n")
 cat("Note: This requires actual map data. Please provide shapefile or map data.\n")
+
+
+
+

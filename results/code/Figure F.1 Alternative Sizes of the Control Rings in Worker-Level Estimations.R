@@ -1,8 +1,8 @@
-############################################################
-## Robustez 1 – Mudanças no Anel de Controle (Workers)
+﻿############################################################
+## Figure F.1 - Alternative Sizes of the Control Rings in Worker-Level Estimations
 ## Controles (EXATAMENTE iguais ao establishment e NA MESMA ORDEM):
-##   40-70, 50-80, 30-80, 50-100  (treat fixo 0–12.5)
-## Saída: ./results/analysis/results_controles_empregados.png
+##   40-70, 50-80, 30-80, 50-100  (treat fixo 0â€“12.5)
+## SaÃ­da: ./results/analysis/results_controles_empregados.png
 ############################################################
 
 rm(list = ls())
@@ -27,7 +27,7 @@ control_specs <- list(
   "50-100" = c(50, 100)
 )
 
-# ORDEM OBRIGATÓRIA (a que você pediu)
+# ORDEM OBRIGATÃ“RIA (a que vocÃª pediu)
 radius_levels <- c("40-70 km",  "30-80 km", "50-100 km")
 
 # Paleta (EXATAMENTE)
@@ -44,10 +44,10 @@ dados <- readRDS("./data/workers_clean_data.rds") %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
-if (nrow(dados) == 0) stop("Workers: `dados` ficou vazio após filtros.")
+if (nrow(dados) == 0) stop("Workers: `dados` ficou vazio apÃ³s filtros.")
 
 # ---------------------------------------------------------
-# Helper: garante tipos numéricos (evita plot sumir)
+# Helper: garante tipos numÃ©ricos (evita plot sumir)
 # ---------------------------------------------------------
 clean_output_for_plot <- function(df) {
   df %>%
@@ -62,7 +62,7 @@ clean_output_for_plot <- function(df) {
 }
 
 # ---------------------------------------------------------
-# Rodar outputs por anel (treat fixo 0–12.5)
+# Rodar outputs por anel (treat fixo 0â€“12.5)
 # ---------------------------------------------------------
 outputs_list <- lapply(names(control_specs), function(k) {
   lo <- control_specs[[k]][1]
@@ -91,16 +91,16 @@ output <- output_raw %>%
     control_chr = gsub("\\s+", "", as.character(control)),
     radius      = paste0(control_chr, " km"),
     
-    # FORÇA ORDEM AQUI
+    # FORÃ‡A ORDEM AQUI
     radius      = factor(radius, levels = radius_levels)
   ) %>%
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-if (nrow(output) == 0) stop("Workers: `output` ficou vazio após filtros/conversões.")
+if (nrow(output) == 0) stop("Workers: `output` ficou vazio apÃ³s filtros/conversÃµes.")
 
 # ---------------------------------------------------------
-# Plot (ordem e cores FORÇADAS via breaks/limits)
+# Plot (ordem e cores FORÃ‡ADAS via breaks/limits)
 # ---------------------------------------------------------
 plot_one <- function(reg) {
   dd <- output %>% filter(Regression == reg)
@@ -116,7 +116,7 @@ plot_one <- function(reg) {
     scale_color_manual(
       values = control_colors,
       breaks = radius_levels,   # <- ORDEM DA LEGENDA
-      limits = radius_levels,   # <- ORDEM FIXA (mesmo se faltar nível)
+      limits = radius_levels,   # <- ORDEM FIXA (mesmo se faltar nÃ­vel)
       drop   = FALSE
     ) +
     coord_flip() +
@@ -127,7 +127,7 @@ plot_one <- function(reg) {
 
 reg_names <- unique(output$Regression)
 
-# se tiver emp/wage, foca neles (senão plota tudo)
+# se tiver emp/wage, foca neles (senÃ£o plota tudo)
 keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
 if (length(keep) > 0) reg_names <- keep
 

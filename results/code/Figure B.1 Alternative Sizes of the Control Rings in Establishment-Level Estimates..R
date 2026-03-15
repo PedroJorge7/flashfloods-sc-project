@@ -1,10 +1,10 @@
-# ============================================================================
-# Figure 5: Alternative Control Rings - Establishment Level (R version)
+﻿# ============================================================================
+# Figure B.1: Alternative Sizes of the Control Rings in Establishment-Level Estimates
 #   AJUSTE: Relocation = reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
-#   IMPORTANTE: reloc_tract_tminus1 é construído ANTES do corte 2003–2012
+#   IMPORTANTE: reloc_tract_tminus1 Ã© construÃ­do ANTES do corte 2003â€“2012
 #   CONTROL RINGS (fixos):
 #     40-70, 50-80, 30-80, 50-100
-#   TESTES: diagnóstico por anel (N obs, N firmas, shares, etc.)
+#   TESTES: diagnÃ³stico por anel (N obs, N firmas, shares, etc.)
 #   CLUSTER: 2-way (id_estab + year) em TODOS os modelos
 # ============================================================================
 
@@ -50,7 +50,7 @@ assert_has_cols <- function(df, cols) {
 
 quick_binary_check <- function(x, name) {
   ok <- all(is.na(x) | x %in% c(0, 1))
-  if (!ok) stop("VARIÁVEL NÃO BINÁRIA: ", name, " (esperado 0/1/NA)")
+  if (!ok) stop("VARIÃVEL NÃƒO BINÃRIA: ", name, " (esperado 0/1/NA)")
   invisible(TRUE)
 }
 
@@ -61,8 +61,8 @@ validate_rings <- function(control_specs) {
     lo <- control_specs[[k]]$lower
     up <- control_specs[[k]]$upper
     if (is.null(lo) || is.null(up)) stop("Ring sem lower/upper: ", k)
-    if (!is.numeric(lo) || !is.numeric(up)) stop("Ring lower/upper não numérico: ", k)
-    if (!(lo < up)) stop("Ring inválido (lower >= upper): ", k)
+    if (!is.numeric(lo) || !is.numeric(up)) stop("Ring lower/upper nÃ£o numÃ©rico: ", k)
+    if (!(lo < up)) stop("Ring invÃ¡lido (lower >= upper): ", k)
   }
   invisible(TRUE)
 }
@@ -92,7 +92,7 @@ validate_rings(control_specs)
 
 outcomes <- c("morte", "reloc_tract_tminus1")
 
-# thresholds para não rodar anel sem massa
+# thresholds para nÃ£o rodar anel sem massa
 MIN_FIRMS <- 200
 MIN_OBS   <- 2000
 
@@ -135,14 +135,14 @@ data <- data %>%
 quick_binary_check(data$reloc_tract_tminus1, "reloc_tract_tminus1 (raw, pre-cut)")
 
 # ---------------------------------------------------------
-# 2) AGORA sim: manter somente 2003–2012
+# 2) AGORA sim: manter somente 2003â€“2012
 # ---------------------------------------------------------
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 3) Construção-base (guardar originais + tendência + tract num)
+# 3) ConstruÃ§Ã£o-base (guardar originais + tendÃªncia + tract num)
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -188,7 +188,7 @@ quick_binary_check(data$morte, "morte (in-sample)")
 quick_binary_check(data$reloc_tract_tminus1, "reloc_tract_tminus1 (in-sample)")
 
 # ---------------------------------------------------------
-# 4) Loop sobre anéis e outcomes
+# 4) Loop sobre anÃ©is e outcomes
 # ---------------------------------------------------------
 all_results <- data.frame()
 diag_table  <- data.frame()
@@ -258,7 +258,7 @@ for (ring in names(control_specs)) {
     ))
   }
   
-  # dummies 2008–2012 + agregado
+  # dummies 2008â€“2012 + agregado
   for (y in 2008:2012) {
     var <- paste0("treat_B_temp_", y)
     temp_data[[var]] <- dplyr::case_when(
@@ -281,7 +281,7 @@ for (ring in names(control_specs)) {
     
     yvar <- paste0(outcome, "_temp")
     
-    # (1) Post agregado — cluster 2-way
+    # (1) Post agregado â€” cluster 2-way
     fml_agg <- as.formula(
       paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract_num]")
     )
@@ -305,7 +305,7 @@ for (ring in names(control_specs)) {
         nobs         = nobs(m_agg)
       )
     
-    # (2) Evento 2008–2012 — cluster 2-way
+    # (2) Evento 2008â€“2012 â€” cluster 2-way
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
@@ -337,17 +337,17 @@ for (ring in names(control_specs)) {
 }
 
 # ---------------------------------------------------------
-# 5) Salvar diagnósticos
+# 5) Salvar diagnÃ³sticos
 # ---------------------------------------------------------
 # write.csv(diag_table,  "results/analysis/control_rings_diagnostics.csv", row.names = FALSE)
 # write.csv(all_results, "results/analysis/control_rings_coeffs.csv",      row.names = FALSE)
 
 if (nrow(all_results) == 0) {
-  stop("Nenhuma regressão rodou (todos os anéis caíram nos testes MIN_FIRMS/MIN_OBS). Veja diagnostics CSV.")
+  stop("Nenhuma regressÃ£o rodou (todos os anÃ©is caÃ­ram nos testes MIN_FIRMS/MIN_OBS). Veja diagnostics CSV.")
 }
 
 # ---------------------------------------------------------
-# 6) Preparar dados e painéis A/B
+# 6) Preparar dados e painÃ©is A/B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(
@@ -414,4 +414,5 @@ ggsave(
   height   = 6,
   units    = "in"
 )
+
 

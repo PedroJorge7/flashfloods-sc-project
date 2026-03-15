@@ -1,10 +1,10 @@
-# ============================================================================
-# Figure 7: Alternative Inference Procedures – Establishment Level (R version)
-# NOVA DEFINIÇÃO: Relocation = Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
+﻿# ============================================================================
+# Figure B.3: Establishment-Level Estimates Using Alternative Inference Procedures
+# NOVA DEFINIÃ‡ÃƒO: Relocation = Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
 # - inclui lead()
-# - inclui correção do 1º ano do id_estab
-# - inclui regra: se morte é NA => relocation NA
-# - FE tendência: treat_trend_f[code_tract_num]  (ordem correta no fixest)
+# - inclui correÃ§Ã£o do 1Âº ano do id_estab
+# - inclui regra: se morte Ã© NA => relocation NA
+# - FE tendÃªncia: treat_trend_f[code_tract_num]  (ordem correta no fixest)
 # ============================================================================
 
 rm(list = ls())
@@ -40,13 +40,13 @@ data <- data %>%
   filter(!is.na(lat), !is.na(lon))
 
 # ---------------------------------------------------------
-# 2) Tratamento (igual Table 3 / Stata) + variáveis base
+# 2) Tratamento (igual Table 3 / Stata) + variÃ¡veis base
 # ---------------------------------------------------------
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal (0–12.5 km vs 50–80 km)
+    # tratamento principal (0â€“12.5 km vs 50â€“80 km)
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
@@ -57,11 +57,11 @@ data <- data %>%
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
   mutate(
-    # garantir numérico (evita haven_labelled)
+    # garantir numÃ©rico (evita haven_labelled)
     morte         = as.numeric(haven::zap_labels(morte)),
     mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
     mover_raw     = mover_ano_mun,  # usado no forward fill do treat_B (como Stata)
-    # outcomes = NA onde treat_B é missing
+    # outcomes = NA onde treat_B Ã© missing
     morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
   # forward fill do treat_B usando mover_ano_mun "bruto" (como Stata)
@@ -86,7 +86,7 @@ data <- data %>%
 # ---------------------------------------------------------
 # 2.1) NOVA relocation: Census Tract, t-1 (via code_tract)
 #      reloc_tract_tminus1(t) = lead( 1[ct(t) != ct(t-1)], 1 )
-#      + seu ajuste obrigatório no 1º ano do id_estab
+#      + seu ajuste obrigatÃ³rio no 1Âº ano do id_estab
 #      + regra alinhada: se morte NA => relocation NA
 # ---------------------------------------------------------
 data <- data %>%
@@ -105,7 +105,7 @@ data <- data %>%
   ungroup() %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# aplica corte por treat_B (igual teu padrão) + correção 1º ano + regra morte->NA
+# aplica corte por treat_B (igual teu padrÃ£o) + correÃ§Ã£o 1Âº ano + regra morte->NA
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, as.numeric(reloc_tract_tminus1))
@@ -135,7 +135,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 2.3) Dummies anuais 2008–2012 + dummy agregada pós-choque
+# 2.3) Dummies anuais 2008â€“2012 + dummy agregada pÃ³s-choque
 # ---------------------------------------------------------
 for (y in 2008:2012) {
   var <- paste0("treat_B_", y)
@@ -156,7 +156,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Especificações de inferência
+# 3) EspecificaÃ§Ãµes de inferÃªncia
 # ---------------------------------------------------------
 outcomes <- c("morte", "reloc_tract_tminus1")
 
@@ -168,7 +168,7 @@ inference_specs <- list(
 )
 
 # ---------------------------------------------------------
-# 4) Rodar regressões (Post + dummies anuais) para cada inferência
+# 4) Rodar regressÃµes (Post + dummies anuais) para cada inferÃªncia
 #    FE: id_estab + year + treat_trend_f[code_tract_num]
 # ---------------------------------------------------------
 all_results <- data.frame()
@@ -213,7 +213,7 @@ for (inf_name in names(inference_specs)) {
         CI_High     = estimate + 1.96 * std.error
       )
     
-    # ---------- (b) Dummies 2008–2012 ----------
+    # ---------- (b) Dummies 2008â€“2012 ----------
     treat_vars <- paste0("treat_B_", 2008:2012)
     fml_evt <- as.formula(
       paste0(outcome, " ~ ",
@@ -255,7 +255,7 @@ for (inf_name in names(inference_specs)) {
 }
 
 # ---------------------------------------------------------
-# 5) Preparar dados e painéis A/B
+# 5) Preparar dados e painÃ©is A/B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(
@@ -313,7 +313,7 @@ pB <- make_panel(
 )
 
 # ---------------------------------------------------------
-# 6) Figura final com legenda única embaixo
+# 6) Figura final com legenda Ãºnica embaixo
 # ---------------------------------------------------------
 fig_inf <- ggpubr::ggarrange(
   pA, pB,
