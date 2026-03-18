@@ -11,6 +11,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(tidyr)
 library(haven)
@@ -49,7 +51,7 @@ tidy_term_safe <- function(model, term){
 # ---------------------------------------------------------
 # 2) Load data (não corta antes de construir relocation t-1)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
   arrange(id_estab, year)
 

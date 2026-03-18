@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Table F.3 - Worker Level Estimates Dropping Units that Moved Across Areas
 ## TREND ONLY, sem Migration
 ## - remove_treat_control_mob = TRUE
@@ -6,6 +6,8 @@
 ############################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 
@@ -15,7 +17,7 @@ dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 0) Carregar dados + filtros (igual principal)
 # ---------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

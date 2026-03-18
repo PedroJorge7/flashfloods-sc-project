@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Figure F.2 - Alternative Sizes of the Treatment Radius in Worker-Level Estimations
 ## Tratamentos: 2.5 7.5 17.5 22.5 30 (control fixo 50â€“80)
 ## SaÃ­da: ./results/analysis/change_treatment_empregados.png
@@ -8,6 +8,8 @@
 ############################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(ggplot2)
@@ -33,7 +35,7 @@ treat_colors <- c(
 # ---------------------------------------------------------
 # Dados + filtros
 # ---------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

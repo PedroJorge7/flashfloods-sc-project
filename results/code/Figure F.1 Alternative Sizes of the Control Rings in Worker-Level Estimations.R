@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Figure F.1 - Alternative Sizes of the Control Rings in Worker-Level Estimations
 ## Controles (EXATAMENTE iguais ao establishment e NA MESMA ORDEM):
 ##   40-70, 50-80, 30-80, 50-100  (treat fixo 0â€“12.5)
@@ -6,6 +6,8 @@
 ############################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(ggplot2)
@@ -40,7 +42,7 @@ control_colors <- c(
 # ---------------------------------------------------------
 # Dados + filtros
 # ---------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Figure G.1: Sensitivity Analysis of the HonestDiD Approach
 # Benchmark: TWFE estimate plus a sensitivity band based on pre-treatment
 # event-study coefficients for establishment outcomes.
@@ -9,6 +9,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(tidyr)
 library(haven)
@@ -18,7 +20,7 @@ library(broom)
 
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 

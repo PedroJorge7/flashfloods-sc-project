@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Table A.1 - Definition of Treatment Radius
 #             Effects of Flooding on Relocation
 #           (replicando o Stata, com formataÃ§Ã£o LaTeX customizada)
@@ -19,6 +19,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(haven)
 library(fixest)
@@ -34,7 +36,7 @@ OUTFILE <- file.path(OUT_DIR, "Tab_A1_Definition_Treatment_Radius_Relocation.tex
 # ---------------------------------------------------------------------------
 # 1) Base crua + recorte 2003â€“2012
 # ---------------------------------------------------------------------------
-dados_raw <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+dados_raw <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003, year <= 2012) %>%
   arrange(id_estab, year) %>%
   mutate(

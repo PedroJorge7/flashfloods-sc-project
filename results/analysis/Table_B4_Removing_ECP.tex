@@ -1,0 +1,41 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{Removing Control Firms in Municipalities Declaring Public Calamity (ECP)}
+  \label{tab: removing_ecp}
+  \scalebox{0.75}{
+ \begin{threeparttable}
+    \begin{tabular}{lccccccc}
+    \toprule
+          & (1)   &       & (2)   &       & (3)   &       & (4) \\
+\cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
+    \multicolumn{8}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
+    Dep. Var: & Closure & & Closure & & Relocation (old) & & Relocation (old) \\
+   \midrule
+    Flash Flood Post & 0.00870*** &  & 0.01410*** &  & 0.00016 &  & -0.00060\\
+                      & (0.00160) &  & (0.00225) &  & (0.00092) &  & (0.00101)\\
+    Observations & 366{,}737 &  & 366{,}737 &  & 367{,}057 &  & 367{,}057\\
+    Census Tract Trend & No &  & Yes &  & No &  & Yes\\
+    \midrule
+    \multicolumn{8}{l}{\textbf{Panel B: Time-Varying DiD}}\\
+    Dep. Var: & Closure & & Closure & & Relocation (old) & & Relocation (old) \\
+    \midrule
+    Flash Flood 2008 & 0.00529** &  & 0.01068*** &  & 0.00062 &  & -0.00015\\
+                      & (0.00207) &  & (0.00264) &  & (0.00090) &  & (0.00095)\\
+    Flash Flood 2009 & 0.00521* &  & 0.01061** &  & 0.00040 &  & -0.00034\\
+                      & (0.00263) &  & (0.00359) &  & (0.00091) &  & (0.00096)\\
+    Flash Flood 2010 & 0.00821** &  & 0.01362** &  & -0.00078 &  & -0.00148\\
+                      & (0.00337) &  & (0.00434) &  & (0.00097) &  & (0.00104)\\
+    Flash Flood 2011 & 0.01329*** &  & 0.01869*** &  & -0.00022 &  & -0.00099\\
+                      & (0.00364) &  & (0.00451) &  & (0.00100) &  & (0.00109)\\
+    Flash Flood 2012 & 0.01405*** &  & 0.01944*** &  & 0.00062 &  & -0.00015\\
+                      & (0.00343) &  & (0.00409) &  & (0.00094) &  & (0.00106)\\
+    Observations & 366{,}737 &  & 366{,}737 &  & 367{,}057 &  & 367{,}057\\
+    Census Tract Trend & No &  & Yes &  & No &  & Yes\\
+    \bottomrule
+    \end{tabular}%
+   	\begin{tablenotes}[flushleft] \item \small Notes: This table replicates the main firm-level specification (Table 3) but excludes observations in which control firms (treat\_B=0) are located in municipalities that declared public calamity (ECP). The excluded municipalities are identified by the variable \texttt{mun}. The filter is equivalent to Stata's \texttt{if !(ecp==1 \& treat\_B==0)}. Relocation (old) corresponds to \texttt{mover\_ano\_mun}. Panel A uses a single post-treatment dummy; Panel B uses time-varying treatment dummies (2008--2012). Treatment radius: 0--12.5 km; control ring: 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered standard errors (establishment and year) are in parentheses. *** p $<$ 0.01, ** p $<$ 0.05, * p $<$ 0.1. 
+   	\item \small Control observations excluded due to ECP rule (within 2003--2012 window): 667.
+   	\end{tablenotes}
+   	\end{threeparttable}
+   	}
+\end{table}%

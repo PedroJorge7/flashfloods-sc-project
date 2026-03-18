@@ -7,6 +7,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(tidyr)
 library(haven)
@@ -41,7 +43,7 @@ perform_ttest <- function(data, var, group_var) {
 # ============================================================================
 # 1) Load data + replicate Stata sample definition (treat_B etc.) – same as original
 # ============================================================================
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
 
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%

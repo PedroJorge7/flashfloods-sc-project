@@ -5,6 +5,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(tidyr)
 library(haven)
@@ -16,7 +18,7 @@ library(stringr)
 # 1) Carregar base
 # ---------------------------------------------------------
 
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
 
 # Manter 2003–2012
 data <- data %>%

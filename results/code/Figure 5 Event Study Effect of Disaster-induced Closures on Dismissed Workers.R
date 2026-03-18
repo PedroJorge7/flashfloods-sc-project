@@ -7,6 +7,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(cowplot)
 library(ggplot2)
@@ -70,7 +72,7 @@ source("./results/code/read_functions.R")
 # ---------------------------------------------------------
 # 2) Dados + filtros (mesma lógica que você fixou)
 # ---------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

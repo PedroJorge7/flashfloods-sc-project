@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Table B.8 - Establishment-Level Estimates Dropping Units that Moved Across Areas
 ## Arquivo mantido neste caminho legado, mas o conteudo pertence ao apendice B.
 ## - Apenas especificaÃ§Ã£o COM tendÃªncia (Census tract trend)
@@ -7,6 +7,8 @@
 ############################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(haven)
@@ -18,7 +20,7 @@ dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 1) Load (nÃ£o corta antes de construir t-1)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
   arrange(id_estab, year)
 

@@ -6,6 +6,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(readr)
 library(MatchIt)
@@ -15,7 +17,7 @@ source("./results/code/read_functions.R")
 # -------------------------------------------------------------------
 # 0) Carregar dados + filtros (EXATAMENTE como você definiu)
 # -------------------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

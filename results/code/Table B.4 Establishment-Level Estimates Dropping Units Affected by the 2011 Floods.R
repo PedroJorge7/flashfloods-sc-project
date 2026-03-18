@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Table B.4 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
 ## - MESMA estratÃ©gia do resultado principal (Table 3):
 ##   * Outcomes: morte (closure) e relocation (DEFINIÃ‡ÃƒO ANTIGA)
@@ -19,6 +19,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(haven)
 library(fixest)
@@ -32,7 +34,7 @@ dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 1) Load data (nÃ£o corta antes; aqui nÃ£o precisamos lead, mas mantÃ©m padrÃ£o)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
   arrange(id_estab, year)
 

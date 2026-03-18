@@ -1,4 +1,4 @@
-﻿############################################################
+############################################################
 ## Table B.6 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
 ## Robustness: Remove municipalities that declared public calamity in 2011 (ECP 2011)
 ## SAME STRATEGY as main result (Table 3), BUT TREND-ONLY:
@@ -15,6 +15,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(haven)
 library(fixest)
@@ -25,7 +27,7 @@ dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 1) Load data (do NOT cut too early; keep construction identical)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
   arrange(id_estab, year)
 

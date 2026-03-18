@@ -1,4 +1,4 @@
-﻿###############################################################################
+###############################################################################
 # Table F.1 - Worker Level Estimates Increasing Post-Treatment Period (ate 2016)
 # TREND ONLY:
 # - Panel A + Panel B
@@ -9,6 +9,8 @@
 ###############################################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(MatchIt)
@@ -22,7 +24,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 # -------------------------------------------------------------------
 # 1) Dados (expandindo atÃ© 2016)
 # -------------------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2016))
 

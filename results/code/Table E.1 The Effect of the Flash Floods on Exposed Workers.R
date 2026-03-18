@@ -1,4 +1,4 @@
-﻿###############################################################################
+###############################################################################
 # Table E.1 - The Effect of the Flash Floods on Exposed Workers (TREND ONLY)
 # (universo de trabalhadores expostos na Ã¡rea tratada com matching)
 # - Usa output_empregados(..., exposed_workers = TRUE, trend = TRUE)
@@ -8,6 +8,8 @@
 ###############################################################################
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(MatchIt)
@@ -21,7 +23,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 1) Dados + filtros (seu padrÃ£o)
 # ---------------------------------------------------------
-dados <- readRDS("./data/workers_clean_data.rds") %>%
+dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 

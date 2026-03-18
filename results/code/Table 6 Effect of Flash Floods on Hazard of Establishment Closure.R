@@ -5,6 +5,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(haven)
 library(survival)
@@ -15,7 +17,7 @@ library(kableExtra)
 # 1) Carregar base
 # ---------------------------------------------------------
 
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
 
 # ---------------------------------------------------------
 # 2) Replicar preparação do Stata

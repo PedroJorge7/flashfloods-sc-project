@@ -1,3 +1,5 @@
+source('./results/code/path_utils.R')
+
 
 
 output_empregados <- function(dados, min_treat, max_treat, 
@@ -102,7 +104,7 @@ output_empregados <- function(dados, min_treat, max_treat,
     filter(year >= 2003 & year <= max(dados$year), year >= min_ano)
   
   # Carregar índice e ajustar rendimentos
-  indice <- readxl::read_excel("./data/indice.xlsx") %>%
+  indice <- readxl::read_excel(data_path("indice.xlsx")) %>%
     select(c(year = Data, indice))
   dados4 <- left_join(dados4, indice) 
   

@@ -6,6 +6,8 @@
 
 rm(list = ls())
 
+source('./results/code/path_utils.R')
+
 library(dplyr)
 library(haven)
 library(fixest)
@@ -15,7 +17,7 @@ library(broom)
 # 1) Base crua + recorte 2003–2012
 # ---------------------------------------------------------------------------
 
-dados_raw <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta")
+dados_raw <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
 
 dados_raw <- dados_raw %>%
   filter(year >= 2003, year <= 2012) %>%

@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Figure B.1: Alternative Sizes of the Control Rings in Establishment-Level Estimates
 #   AJUSTE: Relocation = reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
 #   IMPORTANTE: reloc_tract_tminus1 Ã© construÃ­do ANTES do corte 2003â€“2012
@@ -9,6 +9,8 @@
 # ============================================================================
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(tidyr)
@@ -99,7 +101,7 @@ MIN_OBS   <- 2000
 # ---------------------------------------------------------
 # 1) Carregar base (SEM cortar ainda)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/Natural Disastrer Santa Catarina - Dataset.dta") %>%
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   arrange(id_estab, year)
 
 assert_has_cols(data, c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract"))

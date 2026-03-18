@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Figure B.3: Establishment-Level Estimates Using Alternative Inference Procedures
 # NOVA DEFINIÃ‡ÃƒO: Relocation = Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
 # - inclui lead()
@@ -8,6 +8,8 @@
 # ============================================================================
 
 rm(list = ls())
+
+source('./results/code/path_utils.R')
 
 library(dplyr)
 library(tidyr)
@@ -25,7 +27,7 @@ dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------------------------------
 # 1) Carregar base correta (com coordenadas)
 # ---------------------------------------------------------
-data <- haven::read_dta("./data/firm_coordinates.dta") %>%
+data <- haven::read_dta(data_path("firm_coordinates.dta")) %>%
   mutate(
     lat = Lat,
     lon = Lon
