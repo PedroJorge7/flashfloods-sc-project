@@ -1,5 +1,8 @@
 source('./results/code/path_utils.R')
 
+library(fixest)
+library(tidyr)
+
 
 
 output_empregados <- function(dados, min_treat, max_treat, 
@@ -330,8 +333,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     reg3 <- summary(feols(migration_geral ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
     
     output1 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg3)))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se, p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
@@ -352,8 +355,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     reg3 <- summary(feols(migration_geral ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
     
     output2 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = "Flash Flood Post", estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
@@ -368,8 +371,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     
     
     output3 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg3))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
@@ -388,8 +391,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     reg3 <- summary(feols(migration_geral ~ i(year, treat_B, 2007) | year + cpf, data = dados4), se = "twoway")
     
     output1 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg3)))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se, p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
@@ -410,8 +413,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     reg3 <- summary(feols(migration_geral ~ treat_B_agg | year + cpf, data = dados4), se = "twoway")
     
     output2 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = "Flash Flood Post", estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
@@ -426,8 +429,8 @@ output_empregados <- function(dados, min_treat, max_treat,
     
     
     output3 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg3$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg3$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
+      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
       data.frame(Regression = "C - Migration (0/1)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg3))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     

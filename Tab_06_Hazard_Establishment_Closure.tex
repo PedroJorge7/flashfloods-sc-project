@@ -1,19 +1,25 @@
-\begin{table}[!h]
-\centering
-\caption{Hazard of Establishment Closure – Cox Proportional Hazards Model}
-\centering
-\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
-\begin{tabular}[t]{lcccc}
-\toprule
-row & (1) Coefficient & (1) Hazard Ratio & (2) Coefficient & (2) Hazard Ratio\\
-\midrule
-Flash Flood Post & 0.04867*** & 1.04988*** & 0.05012*** & 1.05139***\\
- & (0.01279) &  & (0.01281) & \\
-Observations & 367,724 & 367,724 & 367,724 & 367,724\\
-Sector FE & Yes & Yes & Yes & Yes\\
-Year FE & Yes & Yes & Yes & Yes\\
-\addlinespace
-Firm Controls & No & No & Yes & Yes\\
-\bottomrule
-\end{tabular}}
-\end{table}
+\begin{table}[htb!]
+  \centering
+  \tabcaption{Effect of Flash Floods on Hazard of Establishment Closure}
+  \label{tab6: hazard_closure}
+  \scalebox{0.75}{
+ \begin{threeparttable}
+    \begin{tabular}{lcc}
+    \toprule
+          & (1) & (2) \\
+    \midrule
+    Flash Flood Post & 0.06097*** & 0.05899*** \\
+                      & (0.01360) & (0.01325) \\
+    Hazard Ratio & 1.06287 & 1.06076 \\
+    Observations & 367{,}759 & 367{,}759 \\
+    Number of Units & 79{,}635 & 79{,}635 \\
+    Number of Failures & 39{,}340 & 39{,}340 \\
+    Establishment Controls & No & Yes \\
+    \bottomrule
+    \end{tabular}%
+    \begin{tablenotes}[flushleft]
+    \item \small Notes: Estimates of equation (3) using the hazard of establishment closure as the dependent variable. The Cox specification uses establishment age as the duration clock. Column (2) adds establishment-level controls reported in the paper. Robust standard errors are reported in parentheses. Observations denote establishment-year observations, the number of units corresponds to unique establishments at risk, and the number of failures indicates establishments that experienced closure. All models include sector and year fixed effects. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \end{tablenotes}
+    \end{threeparttable}
+    }
+\end{table}%

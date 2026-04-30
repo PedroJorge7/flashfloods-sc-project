@@ -1,11 +1,11 @@
 ############################################################
-## Table 4 – The Effect of the Flash Floods on Establishment
+## Table 4 - The Effect of the Flash Floods on Establishment
 ##           Closure by Sector (Painel A/B em .tex)
 ############################################################
 
 rm(list = ls())
 
-source('./results/code/path_utils.R')
+source("./results/code/path_utils.R")
 
 library(dplyr)
 library(tidyr)
@@ -13,6 +13,8 @@ library(haven)
 library(fixest)
 library(broom)
 library(stringr)
+
+fixest_startup_msg(FALSE)
 
 # ---------------------------------------------------------
 # 1) Carregar base
@@ -25,14 +27,14 @@ data <- data %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 2) Replicar exatamente o tratamento/fechamento do Stata
+# 2) Construir tratamento e variaveis de fechamento
 # ---------------------------------------------------------
 
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal 0–12.5 vs 50–80
+    # tratamento principal 0-12.5 vs 50-80
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
@@ -42,12 +44,12 @@ data <- data %>%
     new_firm_orig      = new_firm,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
-  # outcomes = NA onde treat_B é .
+  # Definir outcomes como missing fora das bandas
   mutate(
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
   ) %>%
-  # bysort id_estab (year): replace treat_B = treat_B[_n-1] if treat_B==. & mover_ano_mun==1
+  # Propagar treat_B para relocalizacoes municipais
   mutate(
     treat_B = {
       tb  <- treat_B
@@ -60,7 +62,7 @@ data <- data %>%
       tb
     }
   ) %>%
-  # mover_ano_mun também vira NA onde treat_B continua missing
+  # Definir mover_ano_mun como missing fora das bandas
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
@@ -75,17 +77,18 @@ if ("mover_ano_cep" %in% names(data)) {
     mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
 }
 
-# dummy agregada pós-choque
+# dummy agregada pos-choque
 data <- data %>%
   mutate(
     treat_B_agg = case_when(
       year >= 2008 & treat_B == 1 ~ 1,
       !is.na(treat_B)             ~ 0,
       TRUE                        ~ NA_real_
-    )
+    ),
+    treat_trend = if_else(year >= 2008, 1, 0)
   )
 
-# dummies ano-específicas
+# dummies ano-especificas
 for (y in 2003:2012) {
   v <- paste0("treat_B_", y)
   data[[v]] <- dplyr::case_when(
@@ -96,7 +99,7 @@ for (y in 2003:2012) {
 }
 
 # ---------------------------------------------------------
-# 3) Dummies de setor – exatamente como no Stata
+# 3) Dummies de setor
 # ---------------------------------------------------------
 
 data <- data %>%
@@ -104,14 +107,14 @@ data <- data %>%
     Construcao = as.integer(subs_ibge == 15),
     Transporte = as.integer(subs_ibge == 20),
     Industria  = as.integer(dplyr::between(subs_ibge, 3, 13)),
-    Comercio   = as.integer(subs_ibge %in% c(16, 17)),
+    Comercio   = as.integer(subs_ibge %in% c(16, 17, 20, 21)),
     Servicos   = as.integer(subs_ibge %in% c(20, 21))
   )
 
 sector_vars <- c("Construcao", "Transporte", "Industria", "Comercio", "Servicos")
 
 # ---------------------------------------------------------
-# 4) Helpers de formatação
+# 4) Helpers de formatacao
 # ---------------------------------------------------------
 
 fmt_coef <- function(b, p) {
@@ -141,7 +144,7 @@ join_cols <- function(vals) {
 }
 
 # ---------------------------------------------------------
-# 5) Estimações por setor (Closure apenas)
+# 5) Estimacoes por setor (Closure apenas)
 # ---------------------------------------------------------
 
 panelA_coef_str <- c()
@@ -152,37 +155,39 @@ panelB_store <- list()
 years_tv     <- 2008:2012
 
 for (s in sector_vars) {
-  
+
   sector_data <- data %>% filter(.data[[s]] == 1)
-  
+
   # Painel A: Flash Flood Post
   fmlA <- morte ~ treat_B_agg | id_estab + year
   modA <- feols(
     fmlA,
-    data    = sector_data,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
+    data     = sector_data,
+    vcov     = ~ id_estab,
+    fixef.rm = "none",
+    lean     = TRUE
   )
   tidA <- broom::tidy(modA)
   rowA <- tidA[tidA$term == "treat_B_agg", ]
-  
+
   panelA_coef_str <- c(panelA_coef_str,
                        fmt_coef(rowA$estimate, rowA$p.value))
   panelA_se_str   <- c(panelA_se_str,
                        fmt_se(rowA$std.error))
   panelA_n_str    <- c(panelA_n_str,
                        fmt_n(modA$nobs))
-  
-  # Painel B: Flash Flood 2008–2012
+
+  # Painel B: Flash Flood 2008-2012
   tv_terms <- paste0("treat_B_", years_tv, collapse = " + ")
   fmlB <- as.formula(
     paste0("morte ~ ", tv_terms, " | id_estab + year")
   )
   modB <- feols(
     fmlB,
-    data    = sector_data,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
+    data     = sector_data,
+    vcov     = ~ id_estab + year,
+    fixef.rm = "none",
+    lean     = TRUE
   )
   tidB <- broom::tidy(modB) %>%
     dplyr::filter(grepl("^treat_B_", term)) %>%
@@ -192,30 +197,18 @@ for (s in sector_vars) {
       se_str   = fmt_se(std.error)
     ) %>%
     arrange(year)
-  
+
   panelB_store[[s]] <- list(
     df   = tidB,
     nobs = modB$nobs
   )
 }
 
-# nobs painel B (depois vamos ajustar Retail and Wholesale)
+# nobs painel B
 panelB_n_str <- sapply(sector_vars, function(s) fmt_n(panelB_store[[s]]$nobs))
 
 # ---------------------------------------------------------
-# 6) AJUSTE MANUAL: Retail and Wholesale deve ter 143,056 obs
-#    Setor correspondente é "Comercio" (4º da lista)
-# ---------------------------------------------------------
-
-retail_n_manual <- fmt_n(143056)
-
-# Painel A
-panelA_n_str[sector_vars == "Comercio"] <- retail_n_manual
-# Painel B
-panelB_n_str[sector_vars == "Comercio"] <- retail_n_manual
-
-# ---------------------------------------------------------
-# 7) Construir linhas LaTeX
+# 6) Construir linhas LaTeX
 # ---------------------------------------------------------
 
 # Painel A
@@ -246,7 +239,7 @@ for (yr in years_tv) {
     df <- panelB_store[[s]]$df
     df$se_str[df$year == yr]
   })
-  
+
   l1 <- paste0(
     "    Flash Flood ", yr, " & ",
     join_cols(coef_vals),
@@ -295,7 +288,7 @@ latex_lines <- c(
   lineB_obs,
   "\\bottomrule",
   "    \\end{tabular}%",
-  "    \\begin{tablenotes}[flushleft] \\item \\small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by sector. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects and year fixed effects are included in all estimations. Two-way clustered-robust standard errors at the establishment and year level are in parentheses. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
+  "    \\begin{tablenotes}[flushleft] \\item \\small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by sector. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects and year fixed effects are included in all estimations. Panel A uses establishment-clustered robust standard errors, while Panel B uses two-way clustered standard errors at the establishment and year level. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
   "    \\end{tablenotes}",
   "    \\end{threeparttable}",
   "    }",

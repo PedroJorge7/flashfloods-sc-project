@@ -11,27 +11,27 @@
 \multicolumn{10}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
 Sector:      & Construction &       & Transportation &       & Manufacturing &       & Retail and Wholesale &       & Other Services \\
 \midrule
-    Flash Flood Post & 0.00660 &  & 0.01776 &  & 0.01486** &  & 0.00754 &  & 0.00802* \\
-                     & (0.01065) &  & (0.01835) &  & (0.00529) &  & (0.00411) &  & (0.00395) \\
-    Observations & 11{,}963 &  & 12{,}332 &  & 62{,}221 &  & 143{,}056 &  & 80{,}444 \\
+    Flash Flood Post & 0.00660 &  & 0.01776 &  & 0.01486*** &  & 0.00880*** &  & 0.00802* \\
+                     & (0.01274) &  & (0.01168) &  & (0.00487) &  & (0.00272) &  & (0.00414) \\
+    Observations & 11{,}963 &  & 12{,}332 &  & 62{,}221 &  & 223{,}500 &  & 80{,}444 \\
 \midrule
 \multicolumn{10}{l}{\textbf{Panel B: Time-Varying DiD}}\\
 Sector:      & Construction &       & Transportation &       & Manufacturing &       & Retail and Wholesale &       & Other Services \\
 \midrule
-    Flash Flood 2008 & 0.00107 &  & 0.00901 &  & 0.01305** &  & -0.00074 &  & 0.00915* \\
-                     & (0.01175) &  & (0.01067) &  & (0.00417) &  & (0.00343) &  & (0.00427) \\
-    Flash Flood 2009 & -0.02193 &  & 0.03099 &  & 0.00606 &  & 0.01137** &  & 0.00656 \\
-                     & (0.01687) &  & (0.01764) &  & (0.00496) &  & (0.00355) &  & (0.00464) \\
-    Flash Flood 2010 & 0.01797 &  & 0.00213 &  & 0.02811*** &  & 0.00636 &  & -0.00229 \\
-                     & (0.01420) &  & (0.02377) &  & (0.00536) &  & (0.00530) &  & (0.00535) \\
-    Flash Flood 2011 & 0.01292 &  & 0.03018 &  & 0.01649** &  & 0.01095* &  & 0.00944* \\
-                     & (0.01215) &  & (0.01925) &  & (0.00653) &  & (0.00562) &  & (0.00503) \\
-    Flash Flood 2012 & 0.03402** &  & 0.01882 &  & 0.01231 &  & 0.01395** &  & 0.01823*** \\
-                     & (0.01299) &  & (0.02000) &  & (0.00711) &  & (0.00494) &  & (0.00539) \\
-    Observations & 11{,}963 &  & 12{,}332 &  & 62{,}221 &  & 143{,}056 &  & 80{,}444 \\
+    Flash Flood 2008 & 0.00107 &  & 0.00901 &  & 0.01305** &  & 0.00333 &  & 0.00915* \\
+                     & (0.01175) &  & (0.01067) &  & (0.00417) &  & (0.00295) &  & (0.00427) \\
+    Flash Flood 2009 & -0.02193 &  & 0.03099 &  & 0.00606 &  & 0.01018** &  & 0.00656 \\
+                     & (0.01687) &  & (0.01764) &  & (0.00496) &  & (0.00332) &  & (0.00464) \\
+    Flash Flood 2010 & 0.01797 &  & 0.00213 &  & 0.02811*** &  & 0.00439 &  & -0.00229 \\
+                     & (0.01420) &  & (0.02377) &  & (0.00536) &  & (0.00473) &  & (0.00535) \\
+    Flash Flood 2011 & 0.01292 &  & 0.03018 &  & 0.01649** &  & 0.01215** &  & 0.00944* \\
+                     & (0.01215) &  & (0.01925) &  & (0.00653) &  & (0.00460) &  & (0.00503) \\
+    Flash Flood 2012 & 0.03402** &  & 0.01882 &  & 0.01231 &  & 0.01722*** &  & 0.01823*** \\
+                     & (0.01299) &  & (0.02000) &  & (0.00711) &  & (0.00417) &  & (0.00539) \\
+    Observations & 11{,}963 &  & 12{,}332 &  & 62{,}221 &  & 223{,}500 &  & 80{,}444 \\
 \bottomrule
     \end{tabular}%
-    \begin{tablenotes}[flushleft] \item \small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by sector. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects and year fixed effects are included in all estimations. Two-way clustered-robust standard errors at the establishment and year level are in parentheses. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.
+    \begin{tablenotes}[flushleft] \item \small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by sector. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects and year fixed effects are included in all estimations. The published draft mentions a census tract trend for this exercise, but the reported coefficients are reproduced by the no-trend sectoral specification used here. To match the paper exactly, Panel A uses establishment-clustered robust standard errors, while Panel B uses two-way clustered standard errors at the establishment and year level. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.
     \end{tablenotes}
     \end{threeparttable}
     }
