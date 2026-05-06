@@ -1,8 +1,8 @@
 ############################################################
 ## Table F.3 - Worker Level Estimates Dropping Units that Moved Across Areas
-## TREND ONLY, sem Migration
+## Trend-only specification without Migration
 ## - remove_treat_control_mob = TRUE
-## - Outcomes na tabela: Employment e log.Wage
+## - Table outcomes: Employment and log.Wage
 ############################################################
 
 rm(list = ls())
@@ -10,19 +10,20 @@ rm(list = ls())
 source('./results/code/path_utils.R')
 
 library(dplyr)
+library(MatchIt)
 
 source("./results/code/read_functions.R")
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 0) Carregar dados + filtros (igual principal)
+# 0) Load data and apply the worker sample filters
 # ---------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# 1) Rodar APENAS tendÃªncia + filtro de mobilidade treat/control
+# 1) Run the trend-only specification with the mobility filter
 # ---------------------------------------------------------
 output_trend <- output_empregados(
   dados, 0, 12.5, 50, 80,
@@ -32,21 +33,21 @@ output_trend <- output_empregados(
 
 tab_trend <- as.data.frame(gen_table(output_trend), stringsAsFactors = FALSE)
 
-# MantÃ©m sÃ³ o que interessa (ignora Migration mesmo que venha no gen_table)
+# Keep only the outcomes needed for the table
 need_cols <- c("term", "Employment", "log.Wage")
 miss <- setdiff(need_cols, names(tab_trend))
-if (length(miss) > 0) stop(paste0("Faltam colunas em `tab_trend`: ", paste(miss, collapse = ", ")))
+if (length(miss) > 0) stop(paste0("Missing columns in `tab_trend`: ", paste(miss, collapse = ", ")))
 
 tab <- tab_trend[, need_cols, drop = FALSE]
 
 # ---------------------------------------------------------
-# 2) Gerar LaTeX (2 colunas: Employment (trend) | log Wage (trend))
+# 2) Generate the two-column LaTeX output
 # ---------------------------------------------------------
 make_workers_tex_trend_only_2cols <- function(
     tab,
-    outfile = "./results/analysis/Tab_F3_RemoveMob_TreatControl_Workers_TrendOnly.tex",
-    caption = "Robustness: Removing workers linked to establishments that switch between treated and control areas (Trend only)",
-    label   = "tab:workers_remove_mob_trend_only"
+    outfile = "./results/analysis/Tab_F2_Worker_Level_Dropping_Units_that_Moved_Across_Areas.tex",
+    caption = "Worker Level Estimates Dropping Units that Moved Across Areas",
+    label   = "tab:F2_worker_remove_mob"
 ) {
   obs_row <- nrow(tab)
   
@@ -57,8 +58,8 @@ make_workers_tex_trend_only_2cols <- function(
   
   get_pair <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
-    if (length(i) == 0) stop(paste0("Termo nÃ£o encontrado em `tab`: '", term_value, "'"))
-    if (i == nrow(body)) stop(paste0("Termo '", term_value, "' estÃ¡ na Ãºltima linha; faltou a linha do SE."))
+    if (length(i) == 0) stop(paste0("Term not found in `tab`: '", term_value, "'"))
+    if (i == nrow(body)) stop(paste0("Term '", term_value, "' is on the last row; the standard-error row is missing."))
     list(est = body[i, ], se = body[i + 1, ])
   }
   
@@ -88,7 +89,7 @@ make_workers_tex_trend_only_2cols <- function(
     " Dep. Var:   & Employment &       & log Wage \\\\",
     "    \\midrule",
     row_gap2("    Flash Flood Post", c(A$est$Employment, A$est$`log.Wage`)),
-    row_gap2("                    ", c(A$se$Employment,  A$se$`log.Wage`)),
+    row_gap2("                    ", c(A$se$Employment, A$se$`log.Wage`)),
     row_gap2("    Observations", c(fmt_obs(obs_emp), fmt_obs(obs_wage))),
     row_gap2("    Census Tract Trend", c("Yes", "Yes")),
     "  \\midrule",
@@ -102,7 +103,7 @@ make_workers_tex_trend_only_2cols <- function(
     se  <- B[[k]]$se
     latex <- c(latex,
                row_gap2(paste0("    ", est$term), c(est$Employment, est$`log.Wage`)),
-               row_gap2("                    ", c(se$Employment,  se$`log.Wage`)))
+               row_gap2("                    ", c(se$Employment, se$`log.Wage`)))
   }
   
   latex <- c(
@@ -113,7 +114,7 @@ make_workers_tex_trend_only_2cols <- function(
     "    \\bottomrule",
     "    \\end{tabular}%",
     "    \\begin{tablenotes}[flushleft]",
-    "    \\item \\small Notes: This table uses the main workers sample restrictions and additionally applies \\texttt{remove\\_treat\\_control\\_mob = TRUE}. Only the trend specification is reported (Census tract trend enabled). Panel A uses a single post-treatment dummy; Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+    "    \\item \\small Notes: This table uses the main workers sample restrictions and additionally applies \\texttt{remove\\_treat\\_control\\_mob = TRUE}. Only the trend specification is reported (Census tract trend enabled). Panel A uses a single post-treatment dummy; Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. Two-way clustered-robust standard errors (year and CPF) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
     "    \\end{tablenotes}",
     "  \\end{threeparttable}",
     "  }",
@@ -121,7 +122,7 @@ make_workers_tex_trend_only_2cols <- function(
   )
   
   writeLines(latex, outfile)
-  cat("OK: LaTeX salvo em:", outfile, "\n")
+  cat("Saved LaTeX to:", outfile, "\n")
 }
 
 make_workers_tex_trend_only_2cols(tab)

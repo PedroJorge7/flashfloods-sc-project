@@ -11,17 +11,40 @@ output_empregados <- function(dados, min_treat, max_treat,
                               expand_outcomes = FALSE,
                               exposed_workers = FALSE,
                               trend = FALSE,
-                              PSM = TRUE) {
+                              PSM = TRUE,
+                              se_type = "twoway",
+                              cluster_formula = ~ pis + cpf) {
+  
+  se_type <- match.arg(se_type, c("twoway", "cluster"))
+  
+  run_worker_model <- function(formula, data, fixef_rm = NULL) {
+    model_args <- list(fml = formula, data = data)
+    
+    if (!is.null(fixef_rm)) {
+      model_args$fixef.rm <- fixef_rm
+    }
+    
+    if (identical(se_type, "cluster")) {
+      model_args$cluster <- cluster_formula
+    }
+    
+    model <- do.call(feols, model_args)
+    
+    summary(
+      model,
+      se = if (identical(se_type, "cluster")) "cluster" else "twoway"
+    )
+  }
   
   if(PSM == TRUE){
     
-    # Filtrar para o ano de 2008 e para a área de estudo
+    # Keep the 2007 worker sample within the study area
     dados2 <- dados %>% filter(year == 2007)
     
-    # Filtrar para as distâncias definidas para tratamento e controle
+    # Restrict the sample to the specified treatment and control bands
     dados3 <- dados2 %>% filter(between(dist_flood, min_treat, max_treat) | between(dist_flood, min_control, max_control))
     
-    # Definir variáveis de tratamento e controle
+    # Create the treatment and control indicators
     if(exposed_workers ==  TRUE){
       dados3 <- dados3 %>%
         mutate(
@@ -38,7 +61,7 @@ output_empregados <- function(dados, min_treat, max_treat,
         filter(treat == 1 | control == 1)
     }
     
-    # Criar variáveis adicionais
+    # Create additional matching covariates
     dados4 <- dados3 %>%
       mutate(
         educ_d1 = ifelse(grau_instr %in% c("1", "2", "3"), 1, 0),
@@ -69,18 +92,18 @@ output_empregados <- function(dados, min_treat, max_treat,
         grande = ifelse(tamestab >= 5, 1, 0)
       )
     
-    # Realizar o matching
+    # Estimate the matching model
     psm <- matchit(treat ~ idade + rem_med_r + temp_empr + tamestab, method = "nearest",
                    exact = c("educ_d1", "educ_d2", "educ_d3", "educ_d4", "male", 
                              "Construcao", "Industria", "Comercio", "servicos", "transporte",
                              "trabalhador_fixo", "trabalhador_temporario", "trabalhador_outros"), 
                    replace = FALSE, data = dados4)
     
-    # Obter dados pareados e salvar
+    # Extract the matched sample
     m.data <- match.data(psm)
     #saveRDS(m.data, file = "restricted_PSM_database.rds")
     
-    # Carregar e processar dados pareados
+    # Merge the matched sample back to the panel
     # dados_PSM <- readRDS("restricted_PSM_database.rds")
     dados_PSM <- m.data
     dados2 <- merge(dados, dados_PSM[, c("cpf", "weights")], by = "cpf")
@@ -106,7 +129,7 @@ output_empregados <- function(dados, min_treat, max_treat,
            empregado = ifelse(is.na(as.numeric(emp_31dez)), 0, 1)) %>%
     filter(year >= 2003 & year <= max(dados$year), year >= min_ano)
   
-  # Carregar índice e ajustar rendimentos
+  # Load the price index and deflate earnings measures
   indice <- readxl::read_excel(data_path("indice.xlsx")) %>%
     select(c(year = Data, indice))
   dados4 <- left_join(dados4, indice) 
@@ -121,7 +144,7 @@ output_empregados <- function(dados, min_treat, max_treat,
   
   if(expand_outcomes == TRUE){
     
-    # Definir variáveis de tratamento
+    # Create treatment variables for the expanded-outcome specification
     # dados4 <- dados4 %>%
     #   arrange(cpf, year) %>%
     #   group_by(cpf) %>%
@@ -163,7 +186,7 @@ output_empregados <- function(dados, min_treat, max_treat,
     
   } else {
     
-    # Definir variáveis de tratamento
+    # Create treatment variables for the standard specification
     dados4 <- dados4 %>%
       mutate(
         treat_B = ifelse(between(dist_flood, min_treat, max_treat), 1,
@@ -210,7 +233,7 @@ output_empregados <- function(dados, min_treat, max_treat,
   #          migration = ifelse(is.na(treat_B), NA, mover_ano_mun))
   
   dados4$migration_geral <- ifelse(dados4$empregado == 0,NA,dados4$migration_geral)
-  # Definição de treat_B_agg e treat_A_agg
+  # Define the aggregated treatment indicator
   dados4$treat_B_agg <- ifelse(dados4$year >= 2009 & dados4$treat_B == 1, 1, NA)
   dados4$treat_B_agg <- ifelse(!is.na(dados4$treat_B) & is.na(dados4$treat_B_agg), 0, dados4$treat_B_agg)
   
@@ -262,7 +285,7 @@ output_empregados <- function(dados, min_treat, max_treat,
   #     theme(legend.position = "bottom")
   # }
   # 
-  # # Usando cowplot para plotar várias regressões
+  # # Use cowplot to combine multiple regressions
   # library(cowplot)
   # lapply(unique(output$Regression), plot) %>% 
   #   plot_grid(plotlist = ., nrow = 2)
@@ -295,7 +318,7 @@ output_empregados <- function(dados, min_treat, max_treat,
   # output <- rbind(output2,output3)
   # output$parmseq <- gsub("Flash Flood ","",output$parmseq)
   # 
-  # # Função para plotar os gráficos
+  # # Helper to plot the figures
   # plot <- function(x){
   #   output %>% 
   #     filter(Regression == x) %>% 
@@ -313,7 +336,7 @@ output_empregados <- function(dados, min_treat, max_treat,
   #     theme(legend.position = "bottom")
   # }
   # 
-  # # Usando cowplot para arranjar os gráficos
+  # # Use cowplot to arrange the figures
   # lapply(unique(output$Regression), plot) %>% 
   #   ggpubr::ggarrange(plotlist = ., nrow = 2, ncol = 2,
   #                     common.legend = TRUE, legend = "bottom")
@@ -327,20 +350,24 @@ output_empregados <- function(dados, min_treat, max_treat,
     dados4$year <- as.numeric(dados4$year)  # ou as.factor(dados4$year)
     dados4$trend <- interaction(dados4$code_tract, dados4$year)
     
-    # Estimações e construção do data frame de output
-    reg1 <- summary(feols(empregado ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract] , data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
+    # Estimate the models and build the output data frame
+    reg1 <- run_worker_model(
+      empregado ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract],
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract],
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     output1 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg3)))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se, p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     output1 <- rbind(output1,c("A - Employment (1/0)",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("B - Wage Value",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("C - Migration (0/1)",2007,0,0,0,0,0,0,  paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
+                     c("B - Wage Value",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
     
     output1 <- output1 %>%
       arrange(Regression, parmseq) %>%
@@ -350,30 +377,40 @@ output_empregados <- function(dados, min_treat, max_treat,
     output1$type <- 'event_study'
     
     
-    reg1 <- summary(feols(empregado ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
+    reg1 <- run_worker_model(
+      empregado ~ treat_B_agg | year + cpf + pre_pos[code_tract],
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ treat_B_agg | year + cpf + pre_pos[code_tract],
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     output2 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = "Flash Flood Post", estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     output2$type <- 'type_treatment'
     
     
-    reg1 <- summary(feols(empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~  treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~  treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract], data = dados4), se = "twoway")
+    reg1 <- run_worker_model(
+      empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract],
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract],
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     
     
     
     output3 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg3))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     
@@ -385,20 +422,24 @@ output_empregados <- function(dados, min_treat, max_treat,
     output <- plyr::rbind.fill(output1,output2,output3)
     
   } else {
-    # Estimações e construção do data frame de output
-    reg1 <- summary(feols(empregado ~ i(year, treat_B, 2007) | year + cpf, data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf, data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~ i(year, treat_B, 2007) | year + cpf, data = dados4), se = "twoway")
+    # Estimate the models and build the output data frame
+    reg1 <- run_worker_model(
+      empregado ~ i(year, treat_B, 2007) | year + cpf,
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf,
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     output1 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg3)))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se, p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     output1 <- rbind(output1,c("A - Employment (1/0)",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("B - Wage Value",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("C - Migration (0/1)",2007,0,0,0,0,0,0,  paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
+                     c("B - Wage Value",2007,0,0,0,0,0,0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
     
     output1 <- output1 %>%
       arrange(Regression, parmseq) %>%
@@ -408,30 +449,40 @@ output_empregados <- function(dados, min_treat, max_treat,
     output1$type <- 'event_study'
     
     
-    reg1 <- summary(feols(empregado ~ treat_B_agg | year + cpf, data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~ treat_B_agg | year + cpf, data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~ treat_B_agg | year + cpf, data = dados4), se = "twoway")
+    reg1 <- run_worker_model(
+      empregado ~ treat_B_agg | year + cpf,
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ treat_B_agg | year + cpf,
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     output2 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value,nobs = reg1$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = "Flash Flood Post", estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value,nobs = reg2$nobs,  treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     output2$type <- 'type_treatment'
     
     
-    reg1 <- summary(feols(empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf, data = dados4), se = "twoway")
-    reg2 <- summary(feols(log(rendimento_medio_real) ~  treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf, data = dados4), se = "twoway")
-    reg3 <- summary(feols(migration_geral ~  treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf, data = dados4), se = "twoway")
+    reg1 <- run_worker_model(
+      empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf,
+      data = dados4
+    )
+    reg2 <- run_worker_model(
+      log(rendimento_medio_real) ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf,
+      data = dados4,
+      fixef_rm = "none"
+    )
     
     
     
     
     output3 <- rbind(
       data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se,p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "C - Migration (0/1)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg3))), estimate = coef(reg3), se = reg3$se, min = coef(reg3) - 1.96 * reg3$se, max = coef(reg3) + 1.96 * reg3$se,p.value = broom::tidy(reg3)$p.value, nobs = reg3$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
+      data.frame(Regression = "B - Wage Value", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se,p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     )
     
     
@@ -478,16 +529,14 @@ gen_table <- function(df){
   
   table <- table %>% pivot_wider(names_from = 'output', values_from = c('Coef','std.error'))
   
-  # Invertendo a ordem das linhas do dataframe
+  # Reverse the row order if needed
   #table1 <- table1[rev(rownames(table1)), ]
   
   table <- do.call(rbind, lapply(1:nrow(table), function(i) {
     rbind(data.frame(term = table$term[i], Employment  = table$`Coef_A - Employment (1/0)`[i],
-                     `log Wage`  = table$`Coef_B - Wage Value`[i],
-                     Migration   = table$`Coef_C - Migration (0/1)`[i],stringsAsFactors = FALSE),
+                     `log Wage`  = table$`Coef_B - Wage Value`[i], stringsAsFactors = FALSE),
           data.frame(term = ""           , Employment  = table$`std.error_A - Employment (1/0)`[i],
-                     `log Wage`  = table$`std.error_B - Wage Value`[i],
-                     Migration   = table$`std.error_C - Migration (0/1)`[i],stringsAsFactors = FALSE))
+                     `log Wage`  = table$`std.error_B - Wage Value`[i], stringsAsFactors = FALSE))
   }))
   
   
@@ -496,8 +545,8 @@ gen_table <- function(df){
   
 }
 
-event_study_plot <- function(x){
-  output_trend %>% 
+event_study_plot <- function(x, data = output_trend){
+  data %>% 
     filter(type == 'event_study') %>% 
     filter(Regression == x) %>% 
     mutate(parmseq = as.numeric(parmseq)) %>% 
@@ -515,7 +564,7 @@ event_study_plot <- function(x){
     theme(legend.position = "bottom")
 }
 
-# Função para plotar os gráficos
+# Helper to plot the figures
 plot <- function(x){
   output %>% 
     filter(Regression == x) %>% 

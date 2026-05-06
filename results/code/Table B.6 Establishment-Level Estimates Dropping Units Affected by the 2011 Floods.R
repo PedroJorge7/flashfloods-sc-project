@@ -1,7 +1,7 @@
 ############################################################
-## Table B.6 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
+## Table B.4 - Establishment-Level Estimates Dropping Units Affected by the 2011 Floods
 ## Robustness: Remove municipalities that declared public calamity in 2011 (ECP 2011)
-## SAME STRATEGY as main result (Table 3), BUT TREND-ONLY:
+## Trend-only specification with the baseline establishment treatment definition:
 ##   - Outcomes: Closure (morte) and Relocation (reloc_tract_tminus1)
 ##   - 2 columns (TREND ONLY): (1) Closure + Census tract trend,
 ##                             (2) Reloc (Tract,t-1) + trend
@@ -10,7 +10,7 @@
 ##   - FE: id_estab + year
 ##   - Cluster: id_estab + year (two-way)
 ##   - Keep singletons: fixef.rm = "none"
-## Output: ./results/analysis/Tab_B6_Removing_ECP_2011.tex
+## Output: ./results/analysis/Table_B4_Dropping_Units_Affected_by_the_2011_Floods.tex
 ############################################################
 
 rm(list = ls())
@@ -25,7 +25,7 @@ library(broom)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Load data (do NOT cut too early; keep construction identical)
+# 1) Load data before restricting the estimation window
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -35,7 +35,7 @@ need_vars <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_trac
 stopifnot(all(need_vars %in% names(data)))
 
 # ---------------------------------------------------------
-# 1.1) ECP 2011 indicator (as in Stata)
+# 1.1) ECP 2011 indicator
 # ---------------------------------------------------------
 as_num_safe <- function(x) {
   if (inherits(x, "haven_labelled")) x <- haven::zap_labels(x)
@@ -56,7 +56,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 2) Replicate Stata treatment construction (same as main)
+# 2) Reproduce the main treatment construction
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -90,7 +90,7 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) Relocation = Census Tract, t-1 (IGUAL Table 3)
+# 2.1) Relocation = Census Tract, t-1
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -112,7 +112,7 @@ data <- data %>%
   ) %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# 1Âº ano observado: se reloc==1 -> vira 0 (IGUAL Table 3)
+# First observed year: recode relocation from 1 to 0
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -123,7 +123,7 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# if Closure is NA, Relocation must be NA (IGUAL Table 3)
+# Match the main sample rule: if closure is NA, relocation must also be NA
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1), 0, reloc_tract_tminus1),
@@ -163,7 +163,7 @@ for (y in 2008:2012) {
 }
 
 # ---------------------------------------------------------
-# 4) Restrict to 2003â€“2012 + remove ECP 2011
+# 4) Restrict to 2003-2012 and remove ECP 2011
 # ---------------------------------------------------------
 data_tab <- data %>% filter(year >= 2003 & year <= 2012)
 data_tab_ecp <- data_tab %>% filter(ecp_2011 == 0)
@@ -206,7 +206,7 @@ mods_B <- list(panelB_tr[["morte"]], panelB_tr[["reloc_tract_tminus1"]])
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
   out <- tt[tt$term == term, c("estimate", "std.error", "p.value")]
-  if (nrow(out) == 0) stop(paste("Termo nÃ£o encontrado:", term))
+  if (nrow(out) == 0) stop(paste("Term not found:", term))
   out[1, , drop = FALSE]
 }
 
@@ -267,7 +267,7 @@ lines <- c(lines,
            "    \\midrule"
 )
 
-# Panel B: 2008â€“2012
+# Panel B: 2008-2012
 years_evt <- 2008:2012
 terms_evt <- paste0("treat_B_", years_evt)
 
@@ -290,11 +290,12 @@ lines <- c(
   row_gap2("    Census Tract Trend", c("Yes","Yes")),
   "    \\bottomrule",
   "    \\end{tabular}%",
-  "   \t\\begin{tablenotes}[flushleft] \\item \\small Notes: This table replicates the main firm-level DiD strategy excluding establishments located in municipalities that declared public calamity in 2011 (ECP 2011). It reports only specifications including census tract trends via varying slopes (treat\\_trend[code\\_tract\\_num]). Outcomes are closure (\\texttt{morte}, column (1)) and relocation defined as \\textit{Census Tract, t-1} (\\texttt{reloc\\_tract\\_tminus1}, column (2)). Panel A uses the time-aggregated post-treatment indicator (\\texttt{treat\\_B\\_agg}); Panel B uses time-varying treatment dummies (\\texttt{treat\\_B\\_2008}--\\texttt{treat\\_B\\_2012}). Treatment radius is 0--12.5 km and control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+  "   \t\\begin{tablenotes}[flushleft] \\item \\small Notes: This table excludes establishments located in municipalities that declared public calamity in 2011 (ECP 2011) and reports only specifications including census tract trends via varying slopes (treat\\_trend[code\\_tract\\_num]). Outcomes are closure (\\texttt{morte}, column (1)) and relocation defined as \\textit{Census Tract, t-1} (\\texttt{reloc\\_tract\\_tminus1}, column (2)). Panel A uses the time-aggregated post-treatment indicator (\\texttt{treat\\_B\\_agg}); Panel B uses time-varying treatment dummies (\\texttt{treat\\_B\\_2008}--\\texttt{treat\\_B\\_2012}). The treatment radius is 0--12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered standard errors (establishment and year) are shown in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
   "   \t\\end{tablenotes}",
   "   \t\\end{threeparttable}",
   "   \t}",
   "\\end{table}%"
 )
 
-writeLines(lines, "./results/analysis/Tab_B6_Removing_ECP_2011.tex")
+writeLines(lines, "./results/analysis/Table_B4_Dropping_Units_Affected_by_the_2011_Floods.tex")
+message("Saved: ./results/analysis/Table_B4_Dropping_Units_Affected_by_the_2011_Floods.tex")

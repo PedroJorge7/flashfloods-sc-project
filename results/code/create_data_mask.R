@@ -45,7 +45,7 @@ supported_extensions <- c("rds", "dta", "xlsx")
 data_files <- all_files[tolower(tools::file_ext(all_files)) %in% supported_extensions]
 
 if (length(data_files) == 0) {
-  stop("Nenhum arquivo suportado foi encontrado em ./data.")
+  stop("No supported file was found in ./data.")
 }
 
 value_to_key <- function(x) {
@@ -82,14 +82,14 @@ read_supported_file <- function(path) {
     return(NULL)
   }
 
-  stop(sprintf("Formato nao suportado: %s", path))
+  stop(sprintf("Unsupported format: %s", path))
 }
 
 copy_as_is <- function(source_path, target_path) {
   dir.create(dirname(target_path), recursive = TRUE, showWarnings = FALSE)
   ok <- file.copy(source_path, target_path, overwrite = TRUE)
   if (!ok) {
-    stop(sprintf("Falha ao copiar arquivo: %s", source_path))
+    stop(sprintf("Failed to copy file: %s", source_path))
   }
 }
 
@@ -211,4 +211,4 @@ write.csv(
   row.names = FALSE
 )
 
-message(sprintf("Mascara criada em: %s", target_dir))
+message(sprintf("Mask created at: %s", target_dir))

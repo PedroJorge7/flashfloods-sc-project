@@ -1,7 +1,7 @@
 # ============================================================================
-# Figure 2: Evolution of Aggregate Outcomes (2003-2012) – 4 panels
-#   FIXED: Relocation measure = Census Tract, t-1 (via code_tract)
-#   FIXED: panel B “empty” (label mismatch)
+# Figure 2: Evolution of Aggregate Outcomes (2003-2012) - 4 panels
+#   Relocation is measured at the Census Tract, t-1 level (via code_tract)
+#   Panel B labels are aligned with the plotting order
 # Output: ./results/analysis/graph_descritivo.png
 # ============================================================================
 
@@ -16,42 +16,42 @@ library(ggpubr)
 library(haven)
 
 # ---------------------------------------------------------
-# 0) Garantir diretório de saída
+# 0) Ensure the output directory exists
 # ---------------------------------------------------------
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ============================================================================
-# 1) Carregar base bruta (NÃO cortar em 2012 antes de construir t-1)
+# 1) Load the full panel before constructing t-1 measures
 # ============================================================================
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
-  filter(year >= 2003) %>%   # mantém anos posteriores para construir lead()
+  filter(year >= 2003) %>%   # Keep later years needed to construct lead()
   arrange(id_estab, year)
 
 # ============================================================================
-# 2) Replicar o tratamento do Stata (treat_B, morte, mover_ano_mun, etc.)
-#    antes do collapse
+# 2) Build treatment, closure, and municipal relocation variables
+#    before aggregation
 # ============================================================================
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # treat_B exatamente como no Stata
+    # Main treatment definition
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    # guardar originais
+    # Preserve original variables for reference
     morte_orig         = morte,
     new_firm_orig      = new_firm,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
-  # replace morte/new_firm = .  if treat_B == .
+  # Set closure and entry outcomes to missing outside the analysis bands
   mutate(
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
   ) %>%
-  # bysort id_estab (year): replace treat_B = treat_B[_n-1] if treat_B == . & mover_ano_mun == 1
+  # Carry treatment status forward only for establishments that relocate across municipalities
   mutate(
     treat_B = {
       tb  <- treat_B
@@ -64,13 +64,13 @@ data <- data %>%
       tb
     }
   ) %>%
-  # replace mover_ano_mun = . if treat_B == .
+  # Set mover_ano_mun to missing outside the analysis bands
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
-# (se existirem, replicaria o corte para mover_ano_tract / mover_ano_cep aqui)
+# Apply the same restriction to alternative relocation measures if they exist
 if ("mover_ano_tract" %in% names(data)) {
   data <- data %>% mutate(mover_ano_tract = if_else(is.na(treat_B), NA_real_, mover_ano_tract))
 }
@@ -79,13 +79,13 @@ if ("mover_ano_cep" %in% names(data)) {
 }
 
 # ============================================================================
-# 3) Relocation (Census Tract, t-1) a partir de code_tract
+# 3) Construct Census Tract relocation at t-1 from code_tract
 # ============================================================================
 if (!("code_tract" %in% names(data))) {
-  stop("Variável 'code_tract' não existe na base. Não dá para construir relocation por census tract.")
+  stop("Variable 'code_tract' is not available in the dataset, so Census Tract relocation cannot be constructed.")
 }
 if (all(is.na(data$code_tract))) {
-  stop("Variável 'code_tract' está 100% NA na base (vazia). Verifique o .dta / variável correta.")
+  stop("Variable 'code_tract' is entirely missing in the dataset. Check the .dta file and variable name.")
 }
 
 to_chr_id <- function(x) {
@@ -106,7 +106,7 @@ data <- data %>%
       ct != ct_lag              ~ 1,
       TRUE                      ~ 0
     ),
-    reloc_tract_tminus1 = lead(diff_tract, 1)  # NA quando não existe t+1 no painel do estab.
+    reloc_tract_tminus1 = lead(diff_tract, 1)  # Remains NA when the panel has no t+1 observation
   ) %>%
   ungroup() %>%
   mutate(
@@ -115,7 +115,7 @@ data <- data %>%
   select(-ct, -ct_lag, -diff_tract)
 
 # ============================================================================
-# 4) Collapse igual ao Stata (por treat_B x year) e construir proporções
+# 4) Aggregate by treat_B and year and compute proportions
 # ============================================================================
 base_agregado <- data %>%
   mutate(
@@ -156,7 +156,7 @@ base_agregado <- data %>%
       treat_B == 0 ~ "Control",
       TRUE         ~ "Others"
     ),
-    # >>> FIX MÍNIMO: label do relocation tem que bater com vars_ordem <<<
+    # Keep the relocation label aligned with vars_ordem
     variable = case_when(
       variable == "morte"               ~ "A - Closure Rate (%)",
       variable == "reloc_tract_tminus1" ~ "B - Relocation Rate (%)",
@@ -168,7 +168,7 @@ base_agregado <- data %>%
   filter(treat %in% c("Treat", "Control"), !is.na(variable)) %>%
   arrange(variable, treat, year)
 
-# ordem fixa dos painéis (agora bate com o case_when acima)
+# Use a fixed panel order to match the labels defined above
 vars_ordem <- c(
   "A - Closure Rate (%)",
   "B - Relocation Rate (%)",
@@ -176,14 +176,14 @@ vars_ordem <- c(
   "D - Mean Payroll (in BRL)"
 )
 
-# checagem: se algum painel sumir, para aqui (pra não salvar gráfico errado)
+# Stop here if any panel is missing to avoid saving an incomplete figure
 panels_missing <- setdiff(vars_ordem, unique(base_agregado$variable))
 if (length(panels_missing) > 0) {
-  stop("Painéis sem dados (mismatch de labels): ", paste(panels_missing, collapse = " | "))
+  stop("Panels with no data after label matching: ", paste(panels_missing, collapse = " | "))
 }
 
 # ============================================================================
-# 5) Função de plot (SEU ESTILO)
+# 5) Plot function
 # ============================================================================
 create_plot <- function(df, var_name) {
   df %>%
@@ -219,7 +219,7 @@ create_plot <- function(df, var_name) {
 plots <- lapply(vars_ordem, function(v) create_plot(base_agregado, v))
 
 # ============================================================================
-# 6) Combinar em 2x2 e salvar
+# 6) Combine the panels in a 2x2 layout and save
 # ============================================================================
 combined_plot <- ggpubr::ggarrange(
   plotlist      = plots,

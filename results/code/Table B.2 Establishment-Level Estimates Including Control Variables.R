@@ -1,14 +1,15 @@
 ############################################################
-## Robustez 4 – Table B.2 (Establishments) com CONTROLES
-## - MANTÉM APENAS AS COLUNAS COM TENDÊNCIA (Census Tract Trend)
-## - Replica Table 3 (mesma construção de variáveis e janela)
-## - ONLY: morte e reloc_tract_tminus1 (SEM entry)
-## - Adiciona controles: i(year, X2, ref=2007)
-##   X2 = baseline por id_estab (2007; senão último <=2007; senão 0)
-## - Controles NÃO podem mudar nobs (STOP se mudar)
-## - Cluster 2-way: id_estab + year
-## - Salva:
-##   ./results/analysis/Table_B2_Establishment_Level_Estimates_Including_Control_Variables.tex
+## Appendix Table B.1 (Establishments) with additional controls
+## - Keeps only the trend columns (Census Tract Trend)
+## - Uses the 2003-2012 establishment panel with treatment defined by the
+##   0-12.5 km exposure radius and the 50-80 km control ring
+## - Outcomes: morte and reloc_tract_tminus1 only
+## - Adds controls through i(year, X2, ref = 2007)
+##   where X2 is the establishment baseline in 2007, or the last value <= 2007, or 0
+## - Controls must not change the number of observations
+## - Two-way clustering: id_estab + year
+## - Output:
+##   ./results/analysis/Table_B1_Establishment_Level_Estimates_Including_Control_Variables.tex
 ############################################################
 
 rm(list = ls())
@@ -28,11 +29,11 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 OUTFILE <- file.path(
   OUT_DIR,
-  "Table_B2_Establishment_Level_Estimates_Including_Control_Variables.tex"
+  "Table_B1_Establishment_Level_Estimates_Including_Control_Variables.tex"
 )
 
 # ---------------------------------------------------------
-# 1) Load data (NÃO corta antes de construir t-1)
+# 1) Load data before constructing t-1 measures
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -40,10 +41,10 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 
 need <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract")
 miss <- setdiff(need, names(data))
-if (length(miss) > 0) stop("Faltam colunas na base: ", paste(miss, collapse = ", "))
+if (length(miss) > 0) stop("Missing required columns in the dataset: ", paste(miss, collapse = ", "))
 
 # ---------------------------------------------------------
-# 2) Replicar Table 3: tratamento + forward fill (Stata)
+# 2) Build treatment variables with forward carry for municipal relocations
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -74,7 +75,7 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) Relocation = Census Tract, t-1 (igual Table 3)
+# 2.1) Construct relocation as Census Tract, t-1
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -96,7 +97,7 @@ data <- data %>%
   ) %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# 1º ano observado: se reloc==1 -> 0
+# First observed year: recode relocation from 1 to 0
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -107,7 +108,7 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# regra Table 3: NA reloc -> 0; se morte NA => reloc NA
+# Replace missing relocation values with 0, then set relocation to NA when closure is NA
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1), 0, reloc_tract_tminus1),
@@ -115,7 +116,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Post agregado + dummies anuais + trend vars (igual Table 3)
+# 3) Create the aggregated post variable, annual dummies, and trend variables
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -146,11 +147,11 @@ for (y in 2008:2012) {
   )
 }
 
-# janela Table 3
+# Restrict to the 2003-2012 estimation window
 data_tab <- data %>% filter(year >= 2003 & year <= 2012)
 
 # ---------------------------------------------------------
-# 4) CONTROLES: baseline <=2007 por id_estab (SEM NA)
+# 4) Controls: establishment baseline at or before 2007, without missing values
 # ---------------------------------------------------------
 controls_candidates <- c(
   "tamestab", "size", "natjur", "subs_ibge", "afil",
@@ -199,51 +200,51 @@ rhs_A <- paste(c("treat_B_agg", control_terms), collapse = " + ")
 rhs_B <- paste(c(paste0("treat_B_", 2008:2012), control_terms), collapse = " + ")
 
 # ---------------------------------------------------------
-# 5) APENAS MODELOS COM TENDÊNCIA (Trend)
+# 5) Estimate trend-only models
 # ---------------------------------------------------------
 mA_cl_tr <- feols(as.formula(paste0("morte ~ ", rhs_A,
                                     " | id_estab + year + treat_trend[code_tract_num]")),
-                  data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mA_rl_tr <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_A,
                                     " | id_estab + year + treat_trend[code_tract_num]")),
-                  data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mB_cl_tr <- feols(as.formula(paste0("morte ~ ", rhs_B,
                                     " | id_estab + year + treat_trend[code_tract_num]")),
-                  data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mB_rl_tr <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", rhs_B,
                                     " | id_estab + year + treat_trend[code_tract_num]")),
-                  data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 # ---------------------------------------------------------
-# 5.1) CHECAGEM: nobs não pode mudar vs Table 3 (trend sem controles)
+# 5.1) Sanity check: controls must not change the estimation sample size
 # ---------------------------------------------------------
 mA_cl_tr0 <- feols(morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                   data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                   data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mA_rl_tr0 <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                   data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                   data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 treat_vars0 <- paste0("treat_B_", 2008:2012, collapse = " + ")
 mB_cl_tr0 <- feols(as.formula(paste0("morte ~ ", treat_vars0,
                                      " | id_estab + year + treat_trend[code_tract_num]")),
-                   data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                   data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mB_rl_tr0 <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars0,
                                      " | id_estab + year + treat_trend[code_tract_num]")),
-                   data = data_tab, cluster = ~ id_estab + year, lean = TRUE)
+                   data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 if (nobs(mA_cl_tr) != nobs(mA_cl_tr0) || nobs(mA_rl_tr) != nobs(mA_rl_tr0)) {
-  stop("ERRO: controles mudaram o número de observações no Panel A (Trend). Isso NÃO pode acontecer.")
+  stop("Error: controls changed the number of observations in Panel A (Trend).")
 }
 if (nobs(mB_cl_tr) != nobs(mB_cl_tr0) || nobs(mB_rl_tr) != nobs(mB_rl_tr0)) {
-  stop("ERRO: controles mudaram o número de observações no Panel B (Trend). Isso NÃO pode acontecer.")
+  stop("Error: controls changed the number of observations in Panel B (Trend).")
 }
 
 # ---------------------------------------------------------
-# 6) Helpers p/ LaTeX
+# 6) Helpers for LaTeX output
 # ---------------------------------------------------------
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
@@ -271,7 +272,7 @@ row_gap2 <- function(label, v) {
 }
 
 # ---------------------------------------------------------
-# 7) Build LaTeX (somente Trend)
+# 7) Build the trend-only LaTeX table
 # ---------------------------------------------------------
 lines <- c(
   "\\begin{supptable}[H]",
@@ -312,7 +313,7 @@ lines <- c(lines,
            "    \\midrule"
 )
 
-# Panel B: 2008–2012 (Trend)
+# Panel B: 2008-2012 (Trend)
 for (yr in 2008:2012) {
   term <- paste0("treat_B_", yr)
   rowB_cl <- get_est(mB_cl_tr, term)
@@ -334,7 +335,7 @@ lines <- c(lines,
            row_gap2("    Baseline Controls $\\times$ Year", c("Yes","Yes")),
            "    \\bottomrule",
            "    \\end{tabular}%",
-           "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table replicates the main specification (Table 3) but reports only the versions including census tract trends (treat\\_trend[code\\_tract\\_num]) and adds baseline controls interacted with year dummies (i(year, X$_{\\le 2007}$, ref=2007)). Baseline values are taken in 2007 when available; otherwise the last non-missing value observed up to 2007; remaining missing are set to 0 to avoid changing the estimation sample. Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Treatment radius is 0--12.5 km and control ring is 50--80 km. Establishment and year fixed effects in all models. Two-way clustered standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+           "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table reports specifications including census tract trends through varying slopes (treat\\_trend[code\\_tract\\_num]) and baseline controls interacted with year dummies (i(year, X$_{\\le 2007}$, ref=2007)). Baseline values are taken in 2007 when available; otherwise the last non-missing value observed up to 2007; remaining missing values are set to 0 to preserve the estimation sample. Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. The treatment radius is 0--12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all models. Two-way clustered standard errors (establishment and year) are shown in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
            "   \t\\end{tablenotes}",
            "   \t\\end{threeparttable}",
            "   \t}",
@@ -342,3 +343,4 @@ lines <- c(lines,
 )
 
 writeLines(lines, OUTFILE)
+message("Saved: ", OUTFILE)

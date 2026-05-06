@@ -1,14 +1,14 @@
 ############################################################
-## Appendix – Table B.3 (R)
+## Appendix - Table B.2 (R)
 ## Establishment-Level Estimates Increasing the Post-Treatment Period
-## - Janela: 2003–2016
-## - TREND ONLY: 2 colunas (Closure+Trend, Reloc+Trend)
-## - ONLY: morte e reloc_tract_tminus1
-## - Relocation = Census Tract, t-1 (via code_tract), igual Table 3
-## - Cluster 2-way: id_estab + year
-## - SAFE: termo dropado (ex.: treat_B_2016) => NÃO quebra (deixa vazio)
-## - Salva com o NOME CERTO:
-##   ./results/analysis/Table_B3_Establishment_Level_Estimates_Increasing_Post_Treatment_Period.tex
+## - Sample window: 2003-2016
+## - Trend-only specification with two columns: Closure+Trend and Relocation+Trend
+## - Outcomes: morte and reloc_tract_tminus1 only
+## - Relocation is defined as Census Tract, t-1 (via code_tract)
+## - Two-way clustering: id_estab + year
+## - Dropped terms return blank cells rather than stopping execution
+## - Output:
+##   ./results/analysis/Table_B2_Establishment_Level_Estimates_Increasing_Post_Treatment_Period.tex
 ############################################################
 
 rm(list = ls())
@@ -21,18 +21,18 @@ library(fixest)
 library(broom)
 
 # ---------------------------------------------------------
-# 0) Output dir + nome CERTO do .tex
+# 0) Set the output directory and .tex file name
 # ---------------------------------------------------------
 OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 OUTFILE <- file.path(
   OUT_DIR,
-  "Table_B3_Establishment_Level_Estimates_Increasing_Post_Treatment_Period.tex"
+  "Table_B2_Establishment_Level_Estimates_Increasing_Post_Treatment_Period.tex"
 )
 
 # ---------------------------------------------------------
-# 1) Load data (NÃO corta antes de construir t-1)
+# 1) Load data before constructing t-1 measures
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -40,10 +40,10 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 
 need <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract")
 miss <- setdiff(need, names(data))
-if (length(miss) > 0) stop("Faltam colunas na base: ", paste(miss, collapse = ", "))
+if (length(miss) > 0) stop("Missing required columns in the dataset: ", paste(miss, collapse = ", "))
 
 # ---------------------------------------------------------
-# 2) Replicar Stata treatment construction (igual Table 3)
+# 2) Build treatment variables with forward carry for municipal relocations
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -74,7 +74,7 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) Construir reloc_tract_tminus1 via code_tract (Census Tract, t-1)
+# 2.1) Construct reloc_tract_tminus1 from code_tract (Census Tract, t-1)
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -97,7 +97,7 @@ data <- data %>%
   select(-ct, -ct_lag, -diff_tract)
 
 # ---------------------------------------------------------
-# 2.2) REGRA do primeiro ano observado
+# 2.2) First-observed-year adjustment
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -110,9 +110,9 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.3) Regra de amostra (igual Table 3):
-#      (i) NA do relocation vira 0
-#      (ii) se Closure é NA => Relocation vira NA
+# 2.3) Sample-alignment rule:
+#      (i) replace missing relocation values with 0
+#      (ii) set relocation to NA when closure is NA
 # ---------------------------------------------------------
 data <- data %>%
   mutate(
@@ -121,7 +121,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) treat_B_agg + dummies 2008–2016 + trend vars
+# 3) Create treat_B_agg, year-specific dummies, and trend variables
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -153,40 +153,40 @@ for (y in 2008:2016) {
 }
 
 # ---------------------------------------------------------
-# 4) Restrict 2003–2016
+# 4) Restrict 2003-2016
 # ---------------------------------------------------------
 data_tab <- data %>% filter(year >= 2003 & year <= 2016)
 
 # ---------------------------------------------------------
-# 5) Estimate models (TREND ONLY, 2 colunas)
+# 5) Estimate the two trend-only models
 # ---------------------------------------------------------
 treat_vars_B <- paste0("treat_B_", 2008:2016, collapse = " + ")
 
 # Panel A (trend only)
 mA_cl_tr <- feols(
   morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE
 )
 mA_rl_tr <- feols(
   reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE
 )
 
 # Panel B (trend only)
 mB_cl_tr <- feols(
   as.formula(paste0("morte ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
-  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE
 )
 mB_rl_tr <- feols(
   as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars_B, " | id_estab + year + treat_trend[code_tract_num]")),
-  data = data_tab, cluster = ~ id_estab + year, lean = TRUE
+  data = data_tab, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE
 )
 
 mods_A <- list(mA_cl_tr, mA_rl_tr)
 mods_B <- list(mB_cl_tr, mB_rl_tr)
 
 # ---------------------------------------------------------
-# 6) Helpers (SAFE p/ termo dropado)
+# 6) Helper functions for dropped terms
 # ---------------------------------------------------------
 stars <- function(p) {
   if (is.na(p)) ""
@@ -248,7 +248,7 @@ lines <- c(
   "    \\midrule"
 )
 
-# Panel B: 2008–2016 (SAFE)
+# Panel B: 2008-2016 (SAFE)
 for (yr in 2008:2016) {
   term <- paste0("treat_B_", yr)
   rowB  <- lapply(mods_B, get_est_safe, term = term)
@@ -267,7 +267,7 @@ lines <- c(
   row_gap2("    Census Tract Trend", c("Yes","Yes")),
   "    \\bottomrule",
   "    \\end{tabular}%",
-  "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table extends the post-treatment period through 2016 relative to the baseline specification and reports only the versions including census tract trends via varying slopes (treat\\_trend[code\\_tract\\_num]). Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy (treat\\_B\\_agg); Panel B uses time-varying treatment dummies (2008--2016). The treatment radius ranges from 0 to 12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+  "   \t\\begin{tablenotes}[flushleft] \\item \\small \\textit{Notes:} This table reports specifications with the post-treatment period extended through 2016 and includes census tract trends via varying slopes (treat\\_trend[code\\_tract\\_num]). Closure is measured by \\textit{morte}. Relocation is defined as \\textit{Census Tract, t-1}: $reloc\\_tract\\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \\texttt{code\\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\\_tract\\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy (treat\\_B\\_agg); Panel B uses time-varying treatment dummies (2008--2016). The treatment radius is 0--12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered standard errors (establishment and year) are shown in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
   "   \t\\end{tablenotes}",
   "   \t\\end{threeparttable}",
   "   \t}",
@@ -275,4 +275,4 @@ lines <- c(
 )
 
 writeLines(lines, OUTFILE)
-message("OK — salvou: ", OUTFILE)
+message("Saved: ", OUTFILE)

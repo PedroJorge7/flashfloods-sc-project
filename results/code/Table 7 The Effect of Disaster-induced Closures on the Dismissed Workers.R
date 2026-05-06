@@ -1,7 +1,8 @@
 ############################################################
-## Table 7 (Workers) – gerar LaTeX direto do objeto "table"
-## (sem XLSX, sem migration)
-## - AJUSTE: espaço MAIOR entre (1) e (2) via p{0.60cm}
+## Table 7 (Workers) generated directly from the `table` object
+## - No intermediate XLSX file
+## - Uses a wider spacer column between models (1) and (2) via p{0.60cm}
+## - Displays the employment and wage estimates directly from the models
 ############################################################
 
 rm(list = ls())
@@ -15,24 +16,28 @@ library(MatchIt)
 source("./results/code/read_functions.R")
 
 # -------------------------------------------------------------------
-# 0) Carregar dados + filtros (EXATAMENTE como você definiu)
+# 0) Load data and apply the worker sample filters
 # -------------------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
 # -------------------------------------------------------------------
-# 1) Rodar outputs (essas funções você já tem no projeto)
+# 1) Run the project output functions
 # -------------------------------------------------------------------
-output       <- output_empregados(dados, 0, 12.5, 50, 80)
-output_trend <- output_empregados(dados, 0, 12.5, 50, 80, trend = TRUE)
+output <- output_empregados(
+  dados, 0, 12.5, 50, 80
+)
+output_trend <- output_empregados(
+  dados, 0, 12.5, 50, 80,
+  trend = TRUE
+)
 
 output_table       <- gen_table(output)
 output_trend_table <- gen_table(output_trend)
 
 # -------------------------------------------------------------------
-# 2) Montar a tabela “wide” exatamente como você mostrou
-#    Colunas: term | Employment | Employment_trend | log.Wage | log.Wage_trend
+# 2) Build the wide table for the displayed worker outcomes
 # -------------------------------------------------------------------
 table <- cbind(
   output_table[, 1:2],
@@ -41,41 +46,41 @@ table <- cbind(
   log.Wage_trend   = output_trend_table[, 3]
 )
 
-# garante data.frame character (evita bugs de cbind tibble/matrix)
+# Force a character data.frame to avoid tibble/matrix binding issues
 tab <- as.data.frame(table, stringsAsFactors = FALSE)
 
-# sanity check mínimo
+# Basic sanity check
 need_cols <- c("term", "Employment", "Employment_trend", "log.Wage", "log.Wage_trend")
 miss_cols <- setdiff(need_cols, names(tab))
 if (length(miss_cols) > 0) {
-  stop(paste0("Faltam colunas em `table`: ", paste(miss_cols, collapse = ", ")))
+  stop(paste0("Missing columns in `table`: ", paste(miss_cols, collapse = ", ")))
 }
 
 # -------------------------------------------------------------------
-# 3) Gerar LaTeX a partir do objeto tab
+# 3) Generate LaTeX from the table object
 # -------------------------------------------------------------------
 make_workers_tex_from_table <- function(tab,
                                         outfile = "./results/analysis/Tab_07_Effect_Dismissed_Workers.tex",
                                         caption = "The Effect of Disaster-induced Closures on the Dismissed Workers",
                                         label   = "tab:workers_results") {
   
-  # Em geral, o último registro é Observations (como no seu print).
+  # The last row usually stores the observation counts.
   obs_row <- nrow(tab)
   
-  # Observations (vem como char)
+  # Observations are stored as character strings
   obs_emp        <- tab$Employment[obs_row]
   obs_emp_trend  <- tab$Employment_trend[obs_row]
   obs_wage       <- tab$`log.Wage`[obs_row]
   obs_wage_trend <- tab$log.Wage_trend[obs_row]
   
-  # remove obs row do corpo
+  # Remove the observation row from the body
   body <- tab[-obs_row, , drop = FALSE]
   
-  # helpers para pegar linha de coef e a linha imediatamente abaixo (SE)
+  # Helper to retrieve a coefficient row and the standard-error row below it
   get_pair <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
-    if (length(i) == 0) stop(paste0("Termo não encontrado em `table`: '", term_value, "'"))
-    if (i == nrow(body)) stop(paste0("Termo '", term_value, "' está na última linha do corpo; faltou a linha do SE."))
+    if (length(i) == 0) stop(paste0("Term not found in `table`: '", term_value, "'"))
+    if (i == nrow(body)) stop(paste0("Term '", term_value, "' is on the last row of the body; the standard-error row is missing."))
     list(est = body[i, ],
          se  = body[i + 1, ])
   }
@@ -87,15 +92,15 @@ make_workers_tex_from_table <- function(tab,
   years <- 2008:2012
   B <- lapply(years, function(y) get_pair(paste0("Flash Flood ", y)))
   
-  # formata obs com {,} (estilo LaTeX do seu exemplo)
+  # Format observation counts with {,} for LaTeX
   fmt_obs <- function(x) {
     x <- as.character(x)
     x <- gsub(",", "{,}", x, fixed = TRUE)
     x
   }
   
-  # Monta LaTeX (mesmo estilo com colunas “vazias” entre modelos)
-  # AJUSTE: espaço MAIOR entre (1) e (2) usando p{0.60cm} na 3ª coluna
+  # Build LaTeX with blank spacer columns between models
+  # Use a wider spacer between columns (1) and (2) through p{0.60cm}
   latex <- c(
     "\\begin{table}[htb]",
     "  \\centering",
@@ -160,7 +165,7 @@ make_workers_tex_from_table <- function(tab,
              "    \\bottomrule",
              "    \\end{tabular}%",
              "    \\begin{tablenotes}[flushleft]",
-             "    \\item \\small This table shows estimates from a difference-in-differences model for employment (columns (1) and (2)) and log wage (columns (3) and (4)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. The sample is constructed from dismissed workers under the restrictions \\texttt{emprego\\_06\\_07 = 1} and \\texttt{mesma\\_empresa\\_06\\_07 = TRUE}. Worker fixed effects and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (establishment and year) are in parentheses and are computed separately for each outcome equation. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
+             "    \\item \\small This table shows estimates from a difference-in-differences model for employment (columns (1) and (2)) and log wage (columns (3) and (4)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008--2012), with 2007 as the omitted year. The sample is constructed from dismissed workers under the restrictions \\texttt{emprego\\_06\\_07 = 1} and \\texttt{mesma\\_empresa\\_06\\_07 = TRUE}. Worker fixed effects and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (year and CPF) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.",
              "    \\end{tablenotes}",
              "    \\end{threeparttable}",
              "    }",
@@ -168,10 +173,10 @@ make_workers_tex_from_table <- function(tab,
   )
   
   writeLines(latex, outfile)
-  cat("OK: LaTeX salvo em:", outfile, "\n")
+  cat("Saved LaTeX to:", outfile, "\n")
 }
 
 # -------------------------------------------------------------------
-# 4) Gerar arquivo .tex
+# 4) Write the .tex output
 # -------------------------------------------------------------------
 make_workers_tex_from_table(tab)

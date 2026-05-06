@@ -1,6 +1,6 @@
 ############################################################
 ## Table 4 - The Effect of the Flash Floods on Establishment
-##           Closure by Sector (Painel A/B em .tex)
+##           Closure by Sector (.tex output with Panels A and B)
 ############################################################
 
 rm(list = ls())
@@ -17,7 +17,7 @@ library(stringr)
 fixest_startup_msg(FALSE)
 
 # ---------------------------------------------------------
-# 1) Carregar base
+# 1) Load data
 # ---------------------------------------------------------
 
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
@@ -27,14 +27,14 @@ data <- data %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 2) Construir tratamento e variaveis de fechamento
+# 2) Build treatment and closure variables
 # ---------------------------------------------------------
 
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal 0-12.5 vs 50-80
+    # Main treatment definition: 0-12.5 km vs 50-80 km
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
@@ -44,12 +44,12 @@ data <- data %>%
     new_firm_orig      = new_firm,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
-  # Definir outcomes como missing fora das bandas
+  # Set outcomes to missing outside the treatment and control bands
   mutate(
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
   ) %>%
-  # Propagar treat_B para relocalizacoes municipais
+  # Carry treatment status forward for municipal relocations
   mutate(
     treat_B = {
       tb  <- treat_B
@@ -62,7 +62,7 @@ data <- data %>%
       tb
     }
   ) %>%
-  # Definir mover_ano_mun como missing fora das bandas
+  # Set mover_ano_mun to missing outside the treatment and control bands
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
@@ -77,7 +77,7 @@ if ("mover_ano_cep" %in% names(data)) {
     mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
 }
 
-# dummy agregada pos-choque
+# Aggregated post-treatment indicator
 data <- data %>%
   mutate(
     treat_B_agg = case_when(
@@ -88,7 +88,7 @@ data <- data %>%
     treat_trend = if_else(year >= 2008, 1, 0)
   )
 
-# dummies ano-especificas
+# Year-specific treatment dummies
 for (y in 2003:2012) {
   v <- paste0("treat_B_", y)
   data[[v]] <- dplyr::case_when(
@@ -99,7 +99,7 @@ for (y in 2003:2012) {
 }
 
 # ---------------------------------------------------------
-# 3) Dummies de setor
+# 3) Sector indicators
 # ---------------------------------------------------------
 
 data <- data %>%
@@ -114,7 +114,7 @@ data <- data %>%
 sector_vars <- c("Construcao", "Transporte", "Industria", "Comercio", "Servicos")
 
 # ---------------------------------------------------------
-# 4) Helpers de formatacao
+# 4) Formatting helpers
 # ---------------------------------------------------------
 
 fmt_coef <- function(b, p) {
@@ -144,7 +144,7 @@ join_cols <- function(vals) {
 }
 
 # ---------------------------------------------------------
-# 5) Estimacoes por setor (Closure apenas)
+# 5) Estimate sector-specific closure models
 # ---------------------------------------------------------
 
 panelA_coef_str <- c()
@@ -158,7 +158,7 @@ for (s in sector_vars) {
 
   sector_data <- data %>% filter(.data[[s]] == 1)
 
-  # Painel A: Flash Flood Post
+  # Panel A: Flash Flood Post
   fmlA <- morte ~ treat_B_agg | id_estab + year
   modA <- feols(
     fmlA,
@@ -177,7 +177,7 @@ for (s in sector_vars) {
   panelA_n_str    <- c(panelA_n_str,
                        fmt_n(modA$nobs))
 
-  # Painel B: Flash Flood 2008-2012
+  # Panel B: Flash Flood 2008-2012
   tv_terms <- paste0("treat_B_", years_tv, collapse = " + ")
   fmlB <- as.formula(
     paste0("morte ~ ", tv_terms, " | id_estab + year")
@@ -204,14 +204,14 @@ for (s in sector_vars) {
   )
 }
 
-# nobs painel B
+# Panel B observations
 panelB_n_str <- sapply(sector_vars, function(s) fmt_n(panelB_store[[s]]$nobs))
 
 # ---------------------------------------------------------
-# 6) Construir linhas LaTeX
+# 6) Build LaTeX rows
 # ---------------------------------------------------------
 
-# Painel A
+# Panel A
 lineA1 <- paste0(
   "    Flash Flood Post & ",
   join_cols(panelA_coef_str),
@@ -228,7 +228,7 @@ lineA3 <- paste0(
   " \\\\"
 )
 
-# Painel B
+# Panel B
 panelB_lines <- c()
 for (yr in years_tv) {
   coef_vals <- sapply(sector_vars, function(s) {
@@ -260,7 +260,7 @@ lineB_obs <- paste0(
 )
 
 # ---------------------------------------------------------
-# 8) Montar .tex e salvar
+# 8) Build the .tex output and save
 # ---------------------------------------------------------
 
 latex_lines <- c(

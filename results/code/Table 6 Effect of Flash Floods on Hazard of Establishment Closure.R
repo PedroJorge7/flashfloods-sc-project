@@ -1,13 +1,9 @@
 ############################################################
 ## Table 6 - Hazard of Establishment Closure (Cox model)
-##
-## The local Cox re-estimation gets very close to the paper, but the
-## published table still differs slightly in the sample construction for
-## this exercise. To keep the main manuscript output aligned with the
-## paper, this script:
-##   1) estimates the closest local Cox specification and saves it as a
-##      diagnostic table; and
-##   2) writes the paper-reported Table 6 as the main .tex output.
+## - Exact R port of the legacy Stata specification
+## - Mirrors: stset year, failure(morte) id(id_estab)
+## - Mirrors: stcox ... , strata(subs_ibge year) vce(cluster id_estab)
+## - Output: ./results/analysis/Tab_06_Hazard_Establishment_Closure.tex
 ############################################################
 
 rm(list = ls())
@@ -36,23 +32,26 @@ data <- data %>%
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    morte = if_else(is.na(treat_B), NA_real_, morte),
-    new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
+    morte_orig = morte,
+    new_firm_orig = new_firm,
+    mover_ano_mun_orig = mover_ano_mun,
+    morte = if_else(is.na(treat_B), NA_real_, as.numeric(morte)),
+    new_firm = if_else(is.na(treat_B), NA_real_, as.numeric(new_firm))
   ) %>%
   mutate(
     treat_B = {
       tb <- treat_B
       mov <- mover_ano_mun
+
       for (i in seq_along(tb)) {
         if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
           tb[i] <- tb[i - 1]
         }
       }
+
       tb
-    }
-  ) %>%
-  mutate(
-    mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
+    },
+    mover_ano_mun = if_else(is.na(treat_B), NA_real_, as.numeric(mover_ano_mun))
   ) %>%
   ungroup() %>%
   mutate(
@@ -62,58 +61,78 @@ data <- data %>%
       if_else(!is.na(treat_B), 0, NA_real_)
     ),
     international_tr = if_else(
-      Importador == 1 | Exportador == 1,
+      Exportador == 1 | Importador == 1,
       1,
       0,
       missing = 0
-    ),
-    # Average workforce education proxy from the four composition shares.
-    avg_educ = 1 * educ_d1 + 2 * educ_d2 + 3 * educ_d3 + 4 * educ_d4
+    )
   )
 
-# Baseline controls are measured at each establishment's first sample year.
-make_initial_value <- function(df, varname) {
+# The Stata do-file builds these controls from the first observed year.
+make_first_year_value <- function(df, varname) {
   tmp <- df %>%
     group_by(id_estab) %>%
-    mutate(first_year = min(year, na.rm = TRUE)) %>%
+    mutate(primeiro_ano = min(year, na.rm = TRUE)) %>%
     ungroup() %>%
     mutate(
       temp = if_else(
-        year == first_year,
+        year == primeiro_ano,
         as.numeric(.data[[varname]]),
         NA_real_
       )
     ) %>%
     group_by(id_estab) %>%
-    mutate(initial_value = suppressWarnings(max(temp, na.rm = TRUE))) %>%
+    mutate(first_year_value = suppressWarnings(max(temp, na.rm = TRUE))) %>%
     ungroup() %>%
     mutate(
-      initial_value = ifelse(is.infinite(initial_value), NA_real_, initial_value)
+      first_year_value = ifelse(is.infinite(first_year_value), NA_real_, first_year_value)
     )
 
-  tmp$initial_value
+  tmp$first_year_value
 }
 
-for (v in c("empregados", "afil", "international_tr", "avg_educ")) {
-  data[[paste0(v, "_0")]] <- make_initial_value(data, v)
+for (v in c("empregados", "afil", "yr_abert", "international_tr", "educ_d2", "educ_d3", "educ_d4")) {
+  data[[paste0(v, "2")]] <- make_first_year_value(data, v)
 }
 
 # ---------------------------------------------------------
-# 2) Cox sample
+# 2) Cox sample following the Stata stset/stcox workflow
 # ---------------------------------------------------------
 
 cox_data <- data %>%
-  group_by(id_estab) %>%
-  mutate(
-    # The paper defines duration as the time between entry and closure.
-    age_start = lag(age, default = 0)
-  ) %>%
-  ungroup() %>%
   filter(
     !is.na(treat_B_agg),
     !is.na(morte),
-    !is.na(age),
-    age > age_start
+    !is.na(subs_ibge),
+    !is.na(year)
+  )
+
+model1_data <- cox_data %>%
+  filter(
+    complete.cases(
+      treat_B_agg,
+      subs_ibge,
+      year,
+      morte,
+      id_estab
+    )
+  )
+
+model2_data <- cox_data %>%
+  filter(
+    complete.cases(
+      treat_B_agg,
+      empregados2,
+      afil2,
+      yr_abert2,
+      educ_d22,
+      educ_d32,
+      educ_d42,
+      subs_ibge,
+      year,
+      morte,
+      id_estab
+    )
   )
 
 # ---------------------------------------------------------
@@ -121,27 +140,29 @@ cox_data <- data %>%
 # ---------------------------------------------------------
 
 cox1 <- coxph(
-  Surv(age_start, age, morte) ~
+  Surv(year, morte) ~
     treat_B_agg +
-    factor(subs_ibge) +
-    factor(year) +
+    strata(subs_ibge, year) +
     cluster(id_estab),
-  data = cox_data,
-  ties = "breslow"
+  data = model1_data,
+  ties = "breslow",
+  na.action = na.omit
 )
 
 cox2 <- coxph(
-  Surv(age_start, age, morte) ~
+  Surv(year, morte) ~
     treat_B_agg +
-    empregados_0 +
-    afil_0 +
-    international_tr_0 +
-    avg_educ_0 +
-    factor(subs_ibge) +
-    factor(year) +
+    empregados2 +
+    afil2 +
+    yr_abert2 +
+    educ_d22 +
+    educ_d32 +
+    educ_d42 +
+    strata(subs_ibge, year) +
     cluster(id_estab),
-  data = cox_data,
-  ties = "breslow"
+  data = model2_data,
+  ties = "breslow",
+  na.action = na.omit
 )
 
 extract_treat <- function(model) {
@@ -160,88 +181,114 @@ extract_treat <- function(model) {
 }
 
 star <- function(p) {
-  if (is.na(p)) "" else if (p < 0.01) "***" else if (p < 0.05) "**" else if (p < 0.10) "*" else ""
+  if (is.na(p)) {
+    ""
+  } else if (p < 0.01) {
+    "***"
+  } else if (p < 0.05) {
+    "**"
+  } else if (p < 0.10) {
+    "*"
+  } else {
+    ""
+  }
 }
 
 fmt_coef <- function(x, p) sprintf("%.5f%s", x, star(p))
 fmt_se <- function(se) sprintf("(%.5f)", se)
-fmt_hr <- function(x) sprintf("%.5f", x)
+fmt_hr <- function(x, p) sprintf("%.5f%s", x, star(p))
 fmt_n <- function(n) {
   gsub(",", "{,}", format(n, big.mark = ",", scientific = FALSE), fixed = TRUE)
+}
+
+summarize_sample <- function(df) {
+  list(
+    n_obs = nrow(df),
+    n_units = dplyr::n_distinct(df$id_estab),
+    n_fail = sum(df$morte == 1, na.rm = TRUE)
+  )
 }
 
 r1 <- extract_treat(cox1)
 r2 <- extract_treat(cox2)
 
-n_obs <- nrow(cox_data)
-n_units <- dplyr::n_distinct(cox_data$id_estab)
-n_fail <- sum(cox_data$morte == 1, na.rm = TRUE)
+s1 <- summarize_sample(model1_data)
+s2 <- summarize_sample(model2_data)
 
 # ---------------------------------------------------------
-# 4) Helper to build LaTeX rows
+# 4) Build the LaTeX table
 # ---------------------------------------------------------
 
-build_latex <- function(res1, res2, n_obs, n_units, n_fail, note_text) {
+build_latex <- function(res1, res2, sample1, sample2, note_text) {
   c(
-  "\\begin{table}[htb!]",
-  "  \\centering",
-  "  \\tabcaption{Effect of Flash Floods on Hazard of Establishment Closure}",
-  "  \\label{tab6: hazard_closure}",
-  "  \\scalebox{0.75}{",
-  " \\begin{threeparttable}",
-  "    \\begin{tabular}{lcc}",
-  "    \\toprule",
-  "          & (1) & (2) \\\\",
-  "    \\midrule",
-  paste0("    Flash Flood Post & ", fmt_coef(res1$coef, res1$p), " & ", fmt_coef(res2$coef, res2$p), " \\\\"),
-  paste0("                      & ", fmt_se(res1$se), " & ", fmt_se(res2$se), " \\\\"),
-  paste0("    Hazard Ratio & ", fmt_hr(res1$hr), " & ", fmt_hr(res2$hr), " \\\\"),
-  paste0("    Observations & ", fmt_n(n_obs), " & ", fmt_n(n_obs), " \\\\"),
-  paste0("    Number of Units & ", fmt_n(n_units), " & ", fmt_n(n_units), " \\\\"),
-  paste0("    Number of Failures & ", fmt_n(n_fail), " & ", fmt_n(n_fail), " \\\\"),
-  "    Establishment Controls & No & Yes \\\\",
-  "    \\bottomrule",
-  "    \\end{tabular}%",
-  "    \\begin{tablenotes}[flushleft]",
-  paste0("    \\item \\small ", note_text),
-  "    \\end{tablenotes}",
-  "    \\end{threeparttable}",
-  "    }",
-  "\\end{table}%"
-)
+    "\\begin{table}[htb!]",
+    "  \\centering",
+    "  \\tabcaption{Effect of Flash Floods on Hazard of Establishment Closure}",
+    "  \\label{tab6: hazard_closure}",
+    "  \\scalebox{0.75}{",
+    " \\begin{threeparttable}",
+    "    \\begin{tabular}{lcccc}",
+    "    \\toprule",
+    "          & \\multicolumn{2}{c}{(1)} & \\multicolumn{2}{c}{(2)} \\\\",
+    "          & Coefficient & Hazard Ratio & Coefficient & Hazard Ratio \\\\",
+    "    \\midrule",
+    paste0(
+      "    Flash Flood Post & ",
+      fmt_coef(res1$coef, res1$p), " & ",
+      fmt_hr(res1$hr, res1$p), " & ",
+      fmt_coef(res2$coef, res2$p), " & ",
+      fmt_hr(res2$hr, res2$p), " \\\\"
+    ),
+    paste0(
+      "                      & ",
+      fmt_se(res1$se), " &  & ",
+      fmt_se(res2$se), " &  \\\\"
+    ),
+    paste0(
+      "    Observations & ",
+      fmt_n(sample1$n_obs), " & ",
+      fmt_n(sample1$n_obs), " & ",
+      fmt_n(sample2$n_obs), " & ",
+      fmt_n(sample2$n_obs), " \\\\"
+    ),
+    paste0(
+      "    Number of Units & ",
+      fmt_n(sample1$n_units), " & ",
+      fmt_n(sample1$n_units), " & ",
+      fmt_n(sample2$n_units), " & ",
+      fmt_n(sample2$n_units), " \\\\"
+    ),
+    paste0(
+      "    Number of Failures & ",
+      fmt_n(sample1$n_fail), " & ",
+      fmt_n(sample1$n_fail), " & ",
+      fmt_n(sample2$n_fail), " & ",
+      fmt_n(sample2$n_fail), " \\\\"
+    ),
+    "    Establishment Controls & No & No & Yes & Yes \\\\",
+    "    \\bottomrule",
+    "    \\end{tabular}%",
+    "    \\begin{tablenotes}[flushleft]",
+    paste0("    \\item \\small ", note_text),
+    "    \\end{tablenotes}",
+    "    \\end{threeparttable}",
+    "    }",
+    "\\end{table}%"
+  )
 }
 
-local_note <- paste0(
-  "Notes: Estimates of equation (3) using the hazard of establishment closure as the dependent variable. ",
-  "The Cox specification uses establishment age as the duration clock. Column (2) adds baseline establishment controls measured in the first sample year: employment, branch count (\\texttt{afil}), international trade indicator, and an average workforce-education proxy built from \\texttt{educ\\_d1}--\\texttt{educ\\_d4}. ",
-  "Robust standard errors are reported in parentheses. Observations denote establishment-year observations, the number of units corresponds to unique establishments at risk, and the number of failures indicates establishments that experienced closure. ",
-  "All models include sector and year fixed effects. This local re-estimation is retained as a diagnostic because the published manuscript reports slightly different counts for the hazard sample. *** p$<$0.01, ** p$<$0.05, * p$<$0.1."
+table_note <- paste0(
+  "Notes: Exact R translation of the legacy Stata specification used for Table 6. ",
+  "The survival setup follows \\texttt{stset year, failure(morte) id(id\\_estab)} and the Cox model follows ",
+  "\\texttt{stcox} with sector-year strata and establishment-clustered standard errors. ",
+  "Column (2) adds the baseline controls generated in the Stata do-file from each establishment's first observed year: ",
+  "employment (\\texttt{empregados2}), branch count (\\texttt{afil2}), opening year (\\texttt{yr\\_abert2}), and workforce education shares ",
+  "(\\texttt{educ\\_d22}, \\texttt{educ\\_d32}, \\texttt{educ\\_d42}). ",
+  "Observations denote establishment-year observations used by each model, the number of units corresponds to unique establishments at risk, ",
+  "and the number of failures indicates establishments that experienced closure. *** p$<$0.01, ** p$<$0.05, * p$<$0.1."
 )
 
-local_latex <- build_latex(r1, r2, n_obs, n_units, n_fail, local_note)
-writeLines(local_latex, "./results/analysis/Tab_06_Hazard_Establishment_Closure_local.tex")
+table_latex <- build_latex(r1, r2, s1, s2, table_note)
 
-paper_r1 <- list(coef = 0.06097, se = 0.01360, p = 0.009, hr = 1.06287)
-paper_r2 <- list(coef = 0.05899, se = 0.01325, p = 0.009, hr = 1.06076)
-paper_n_obs <- 367759
-paper_n_units <- 79635
-paper_n_fail <- 39340
-
-paper_note <- paste0(
-  "Notes: Estimates of equation (3) using the hazard of establishment closure as the dependent variable. ",
-  "The Cox specification uses establishment age as the duration clock. Column (2) adds establishment-level controls reported in the paper. ",
-  "Robust standard errors are reported in parentheses. Observations denote establishment-year observations, the number of units corresponds to unique establishments at risk, and the number of failures indicates establishments that experienced closure. ",
-  "All models include sector and year fixed effects. *** p$<$0.01, ** p$<$0.05, * p$<$0.1."
-)
-
-paper_latex <- build_latex(
-  paper_r1,
-  paper_r2,
-  paper_n_obs,
-  paper_n_units,
-  paper_n_fail,
-  paper_note
-)
-
-writeLines(paper_latex, "./results/analysis/Tab_06_Hazard_Establishment_Closure.tex")
-writeLines(paper_latex, "./Tab_06_Hazard_Establishment_Closure.tex")
+writeLines(table_latex, "./results/analysis/Tab_06_Hazard_Establishment_Closure.tex")
+message("Saved: ./results/analysis/Tab_06_Hazard_Establishment_Closure.tex")

@@ -1,310 +1,223 @@
 ############################################################
-## Table 5 – The Effect of the Flash Floods on Establishment
-##           Closure by Business Size (R version)
+## Table 5 - The Effect of the Flash Floods on Establishment
+##           Closure by Business Size
+##
+## Exact port of the Stata heterogeneity block:
+## - same establishment sample construction
+## - same size bins based on empregados
+## - one-way clustered SEs for Panel A
+## - two-way clustered SEs for Panel B
 ############################################################
 
 rm(list = ls())
 
-source('./results/code/path_utils.R')
+source("./results/code/path_utils.R")
 
-library(dplyr)
-library(tidyr)
-library(haven)
-library(fixest)
 library(broom)
-library(stringr)
+library(dplyr)
+library(fixest)
+library(haven)
 
-# ---------------------------------------------------------
-# 1) Carregar base
-# ---------------------------------------------------------
+dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
-data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
+make_numeric_id <- function(x) {
+  if (is.numeric(x)) {
+    return(as.numeric(x))
+  }
 
-# Manter 2003–2012
-data <- data %>%
-  filter(year >= 2003 & year <= 2012) %>%
-  arrange(id_estab, year)
+  x_unl <- haven::zap_labels(x)
+  x_chr <- as.character(x_unl)
+  x_chr[x_chr %in% c("", "NA")] <- NA_character_
 
-# ---------------------------------------------------------
-# 2) Replicar construção de tratamento/fechamento
-#    EXATAMENTE como na Figure 3 (que bateu com o Stata)
-# ---------------------------------------------------------
+  x_num <- suppressWarnings(as.numeric(x_chr))
+  bad <- !is.na(x_chr) & is.na(x_num)
 
-data <- data %>%
+  if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) {
+    x_num <- as.numeric(factor(x_chr))
+  }
+
+  x_num
+}
+
+carry_treatment_forward <- function(treat, mover) {
+  out <- treat
+
+  for (i in seq_along(out)) {
+    if (
+      i > 1 &&
+      is.na(out[i]) &&
+      !is.na(mover[i]) &&
+      mover[i] == 1
+    ) {
+      out[i] <- out[i - 1]
+    }
+  }
+
+  out
+}
+
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
+  mutate(
+    morte = as.numeric(haven::zap_labels(morte)),
+    mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
+    new_firm = as.numeric(haven::zap_labels(new_firm))
+  ) %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # critério de banda (0–12.5 km vs 50–80 km)
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
-      dist_flood >= 50 & dist_flood <= 80 ~ 0,
+      dplyr::between(dist_flood, 50, 80) ~ 0,
       TRUE ~ NA_real_
     ),
-    morte_orig         = morte,
-    new_firm_orig      = new_firm,
+    morte_orig = morte,
+    new_firm_orig = new_firm,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
-  # outcomes = NA onde treat_B é missing
   mutate(
-    morte    = if_else(is.na(treat_B), NA_real_, morte),
-    new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
+    morte = if_else(is.na(treat_B), NA_real_, morte_orig),
+    new_firm = if_else(is.na(treat_B), NA_real_, new_firm_orig),
+    treat_B = carry_treatment_forward(treat_B, mover_ano_mun_orig),
+    mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun_orig)
   ) %>%
-  # forward fill do tratamento só quando há mudança de município
-  mutate(
-    treat_B = {
-      tb  <- treat_B
-      mov <- mover_ano_mun
-      for (i in seq_along(tb)) {
-        if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
-          tb[i] <- tb[i - 1]
-        }
-      }
-      tb
-    }
-  ) %>%
-  # relocação vira NA onde treat_B continua missing
-  mutate(
-    mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
-  ) %>%
-  ungroup()
-
-if ("mover_ano_tract" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_tract = if_else(is.na(treat_B), NA_real_, mover_ano_tract))
-}
-if ("mover_ano_cep" %in% names(data)) {
-  data <- data %>%
-    mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
-}
-
-# Tendência pós-choque
-data <- data %>%
-  mutate(
-    treat_trend = if_else(year >= 2008, 1, 0)
-  )
-
-# Dummy agregada pós-choque (Flash Flood Post)
-data <- data %>%
+  ungroup() %>%
+  filter(year >= 2003 & year <= 2012) %>%
   mutate(
     treat_B_agg = case_when(
       year >= 2008 & treat_B == 1 ~ 1,
-      !is.na(treat_B)             ~ 0,
-      TRUE                        ~ NA_real_
-    )
+      !is.na(treat_B) ~ 0,
+      TRUE ~ NA_real_
+    ),
+    treat_trend = if_else(year >= 2008, 1, 0),
+    code_tract_num = make_numeric_id(code_tract)
   )
 
-# Dummies ano-específicas de tratamento (2003–2012)
-for (y in 2003:2012) {
+for (y in 2002:2016) {
   v <- paste0("treat_B_", y)
   data[[v]] <- dplyr::case_when(
     data$year == y & !is.na(data$treat_B) ~ data$treat_B,
     !is.na(data$treat_B) & data$year != y ~ 0,
-    TRUE                                  ~ NA_real_
+    TRUE ~ NA_real_
   )
 }
-
-# ---------------------------------------------------------
-# 3) Dummies de tamanho da firma – igual ao Stata
-#    gen size_estab1 = 1 if empregado < 10
-#    gen size_estab2 = 1 if inrange(empregado,10,50)
-#    gen size_estab3 = 1 if empregado > 50
-# (assumindo que "empregados" é o "empregado" do do-file)
-# ---------------------------------------------------------
 
 data <- data %>%
   mutate(
-    size_estab1 = as.integer(empregados < 10),
-    size_estab2 = as.integer(empregados >= 10 & empregados <= 50),
-    size_estab3 = as.integer(empregados > 50)
+    size_estab1 = case_when(empregados < 10 ~ 1, TRUE ~ NA_real_),
+    size_estab2 = case_when(dplyr::between(empregados, 10, 50) ~ 1, TRUE ~ NA_real_),
+    size_estab3 = case_when(empregados > 50 ~ 1, TRUE ~ NA_real_)
   )
 
-size_vars    <- c("size_estab1", "size_estab2", "size_estab3")
-size_labels  <- c("Micro Business", "Small Business", "Medium \\& Large Business")
+size_vars <- c("size_estab1", "size_estab2", "size_estab3")
+size_labels <- c("Micro Business", "Small Business", "Medium \\& Large Business")
+treat_vars <- paste0("treat_B_", 2008:2012, collapse = " + ")
 
-# ---------------------------------------------------------
-# 4) Helpers de formatação
-# ---------------------------------------------------------
+fit_size_models <- function(size_var) {
+  size_data <- data %>% filter(.data[[size_var]] == 1)
 
-fmt_coef <- function(b, p) {
-  base  <- sprintf("%.5f", b)
-  stars <- ifelse(p < 0.01, "***",
-                  ifelse(p < 0.05, "**",
-                         ifelse(p < 0.10, "*", "")))
-  paste0(base, stars)
+  list(
+    agg = feols(
+      morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
+      data = size_data,
+      cluster = ~ id_estab,
+      fixef.rm = "none",
+      lean = TRUE
+    ),
+    tv = feols(
+      as.formula(paste0("morte ~ ", treat_vars, " | id_estab + year + treat_trend[code_tract_num]")),
+      data = size_data,
+      cluster = ~ id_estab + year,
+      fixef.rm = "none",
+      lean = TRUE
+    )
+  )
 }
 
-fmt_se <- function(se) {
-  paste0("(", sprintf("%.5f", se), ")")
-}
+size_models <- lapply(size_vars, fit_size_models)
 
-fmt_n <- function(n) {
-  s <- format(n, big.mark = ",", scientific = FALSE, trim = TRUE)
-  gsub(",", "{,}", s)
-}
+get_est <- function(model, term) {
+  tt <- broom::tidy(model)
+  out <- tt[tt$term == term, c("estimate", "std.error", "p.value")]
 
-join_cols <- function(vals) {
-  cells <- character(0)
-  for (k in seq_along(vals)) {
-    cells <- c(cells, vals[k])
-    if (k < length(vals)) cells <- c(cells, "")
+  if (nrow(out) == 0) {
+    stop(paste("Term not found:", term))
   }
-  paste(cells, collapse = " & ")
+
+  out
 }
 
-# ---------------------------------------------------------
-# 5) Estimações por tamanho – Closure (morte)
-#    Painel A: Post (treat_B_agg)
-#    Painel B: Flash Flood 2008–2012 (treat_B_2008 … treat_B_2012)
-#    FE: id_estab + year + census trend (treat_trend[code_tract])
-#    Cluster: id_estab + year
-# ---------------------------------------------------------
-
-panelA_coef_str <- c()
-panelA_se_str   <- c()
-panelA_n_str    <- c()
-
-panelB_store <- list()
-years_tv     <- 2008:2012
-
-for (s in size_vars) {
-  
-  size_data <- data %>% filter(.data[[s]] == 1, !is.na(treat_B))
-  
-  # ----- Painel A: Flash Flood Post -----
-  fmlA <- morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract]
-  modA <- feols(
-    fmlA,
-    data    = size_data,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
-  )
-  tidA <- broom::tidy(modA)
-  rowA <- tidA[tidA$term == "treat_B_agg", ]
-  
-  panelA_coef_str <- c(panelA_coef_str,
-                       fmt_coef(rowA$estimate, rowA$p.value))
-  panelA_se_str   <- c(panelA_se_str,
-                       fmt_se(rowA$std.error))
-  panelA_n_str    <- c(panelA_n_str,
-                       fmt_n(modA$nobs))
-  
-  # ----- Painel B: Flash Flood 2008–2012 -----
-  tv_terms <- paste0("treat_B_", years_tv, collapse = " + ")
-  fmlB <- as.formula(
-    paste0("morte ~ ", tv_terms,
-           " | id_estab + year + treat_trend[code_tract]")
-  )
-  modB <- feols(
-    fmlB,
-    data    = size_data,
-    cluster = ~ id_estab + year,
-    lean    = TRUE
-  )
-  tidB <- broom::tidy(modB) %>%
-    dplyr::filter(grepl("^treat_B_", term)) %>%
-    mutate(
-      year     = as.integer(sub("treat_B_", "", term)),
-      coef_str = fmt_coef(estimate, p.value),
-      se_str   = fmt_se(std.error)
-    ) %>%
-    arrange(year)
-  
-  panelB_store[[s]] <- list(
-    df   = tidB,
-    nobs = modB$nobs
-  )
+stars <- function(p) {
+  ifelse(p < 0.01, "***",
+         ifelse(p < 0.05, "**",
+                ifelse(p < 0.1, "*", "")))
 }
 
-panelB_n_str <- sapply(size_vars, function(s) fmt_n(panelB_store[[s]]$nobs))
+fmt_coef <- function(est, p) sprintf("%.5f%s", est, stars(p))
+fmt_se <- function(se) sprintf("(%.5f)", se)
+fmt_obs <- function(n) gsub(",", "{,}", format(n, big.mark = ",", scientific = FALSE), fixed = TRUE)
 
-# ---------------------------------------------------------
-# 6) Montar linhas LaTeX
-# ---------------------------------------------------------
-
-## Painel A
-lineA1 <- paste0(
-  "    Flash Flood Post & ",
-  join_cols(panelA_coef_str),
-  " \\\\"
-)
-lineA2 <- paste0(
-  "                     & ",
-  join_cols(panelA_se_str),
-  " \\\\"
-)
-lineA3 <- paste0(
-  "    Observations & ",
-  join_cols(panelA_n_str),
-  " \\\\"
-)
-
-## Painel B
-panelB_lines <- c()
-for (yr in years_tv) {
-  coef_vals <- sapply(size_vars, function(s) {
-    df <- panelB_store[[s]]$df
-    df$coef_str[df$year == yr]
-  })
-  se_vals <- sapply(size_vars, function(s) {
-    df <- panelB_store[[s]]$df
-    df$se_str[df$year == yr]
-  })
-  
-  l1 <- paste0(
-    "    Flash Flood ", yr, " & ",
-    join_cols(coef_vals),
-    " \\\\"
-  )
-  l2 <- paste0(
-    "                     & ",
-    join_cols(se_vals),
-    " \\\\"
-  )
-  panelB_lines <- c(panelB_lines, l1, l2)
+row_gap3 <- function(label, v) {
+  stopifnot(length(v) == 3)
+  sprintf("%s & %s &  & %s &  & %s\\\\", label, v[1], v[2], v[3])
 }
 
-lineB_obs <- paste0(
-  "    Observations & ",
-  join_cols(panelB_n_str),
-  " \\\\"
-)
+panelA_rows <- lapply(size_models, function(x) get_est(x$agg, "treat_B_agg"))
+panelA_coef <- sapply(panelA_rows, function(x) fmt_coef(x$estimate, x$p.value))
+panelA_se <- sapply(panelA_rows, function(x) fmt_se(x$std.error))
+panelA_n <- sapply(size_models, function(x) fmt_obs(nobs(x$agg)))
 
-# ---------------------------------------------------------
-# 7) Escrever .tex no formato da Tabela 5
-# ---------------------------------------------------------
-
-latex_lines <- c(
+lines <- c(
   "\\begin{table}[htb!]",
   "  \\centering",
   "  \\tabcaption{The Effect of the Flash Floods on Establishment Closure by Business Size}",
-  "  \\label{tab5: hetero_size}",
-  "  \\scalebox{0.75}{",
-  " \\begin{threeparttable}",
+  "  \\label{tab5:hetero_size}",
+  "  \\scalebox{0.78}{",
+  "  \\begin{threeparttable}",
   "    \\begin{tabular}{lccccc}",
-  "  \\toprule",
-  " & (1)   &       & (2)   &       & (3) \\\\",
+  "    \\toprule",
+  "          & (1)   &       & (2)   &       & (3) \\\\",
   "\\cmidrule(lr){2-2}\\cmidrule(lr){4-4}\\cmidrule(lr){6-6}",
-  "\\multicolumn{6}{l}{\\textbf{Panel A: Time-Aggregated DiD}}\\\\",
-  "Est. Size: & Micro Business &       & Small Business &       & Medium \\& Large Business \\\\",
-  "\\midrule",
-  lineA1,
-  lineA2,
-  lineA3,
-  "\\midrule",
-  "\\multicolumn{6}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\",
-  "Est. Size: & Micro Business &       & Small Business &       & Medium \\& Large Business \\\\",
-  "\\midrule",
-  panelB_lines,
-  lineB_obs,
+  "    \\multicolumn{6}{l}{\\textbf{Panel A: Time-Aggregated DiD}}\\\\",
+  paste0("    Est. Size: & ", size_labels[1], " &       & ", size_labels[2], " &       & ", size_labels[3], " \\\\"),
+  "    \\midrule",
+  row_gap3("    Flash Flood Post", panelA_coef),
+  row_gap3("                     ", panelA_se),
+  row_gap3("    Observations", panelA_n),
+  "    \\midrule",
+  "    \\multicolumn{6}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\",
+  paste0("    Est. Size: & ", size_labels[1], " &       & ", size_labels[2], " &       & ", size_labels[3], " \\\\"),
+  "    \\midrule"
+)
+
+for (yr in 2008:2012) {
+  term <- paste0("treat_B_", yr)
+  rows <- lapply(size_models, function(x) get_est(x$tv, term))
+  coef_vals <- sapply(rows, function(x) fmt_coef(x$estimate, x$p.value))
+  se_vals <- sapply(rows, function(x) fmt_se(x$std.error))
+
+  lines <- c(
+    lines,
+    row_gap3(sprintf("    Flash Flood %d", yr), coef_vals),
+    row_gap3("                     ", se_vals)
+  )
+}
+
+lines <- c(
+  lines,
+  row_gap3("    Observations", sapply(size_models, function(x) fmt_obs(nobs(x$tv)))),
   "    \\bottomrule",
   "    \\end{tabular}%",
-  "   \\begin{tablenotes}[flushleft] \\item \\small Notes: This table presents estimates obtained through the differences-in-differences model for different sub-samples categorized by business size. Panel A presents results from a specification using a single post-treatment dummy, whereas Panel B presents results from a specification with time-varying treatment dummies. Establishment fixed effects, year fixed effects, and census tract trend are included in all estimations. Two-way clustered-robust standard errors at the establishment and year level are in parentheses. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
-  "   \\end{tablenotes}",
+  paste0(
+    "   \\begin{tablenotes}[flushleft] \\item \\small Notes: This table follows the original Stata heterogeneity specification. ",
+    "The three columns split establishments by employment size: fewer than 10 employees, 10--50 employees, and more than 50 employees. ",
+    "All specifications include establishment and year fixed effects plus the legacy census-trend term ",
+    "(\\texttt{treat\\_trend[code\\_tract\\_num]}). Panel A uses one-way clustered standard errors at the establishment level; ",
+    "Panel B uses two-way clustered standard errors at the establishment and year levels. *** p $<$ 0.01, ** p $<$ 0.05, * p $<$ 0.1. ",
+    "\\end{tablenotes}"
+  ),
   "   \\end{threeparttable}",
   "   }",
   "\\end{table}%"
 )
 
-
-writeLines(latex_lines,
-           "results/analysis/Tab_05_Effect_by_Business_Size.tex")
+writeLines(lines, "./results/analysis/Tab_05_Effect_by_Business_Size.tex")

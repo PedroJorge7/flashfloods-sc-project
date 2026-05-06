@@ -1,12 +1,12 @@
 # ============================================================================
 # Figure B.4: Falsification Test for the Control Area in Establishment-Level Estimates
-# FIX DEFINITIVO:
-#  - NÃO tem Entry (só Closure e Relocation)
-#  - Relocation "crua" = Census Tract, t-1: lead(1[ct(t) != ct(t-1)], 1) + correção 1º ano
-#  - Regra alinhada aplicada DENTRO de cada ring: se morte_temp NA => reloc_temp NA
-#  - Forward fill do treat_B_temp ANTES de mascarar outcomes
-#  - Trend FE: treat_trend[code_tract_num]  (code_tract_num SEM NA!)
-#  - Safe feols: se ring/outcome não identifica, não quebra
+# Main implementation notes:
+#  - Estimates Closure and Relocation only
+#  - Uses the raw Census Tract relocation measure at t-1, with the first observed year recoded from 1 to 0
+#  - Applies the closure-based sample alignment within each ring
+#  - Carries treat_B_temp forward before masking the outcomes
+#  - Uses the trend fixed effect treat_trend[code_tract_num], with no missing values in code_tract_num
+#  - Skips unidentified ring/outcome combinations without stopping execution
 # ============================================================================
 
 rm(list = ls())
@@ -24,7 +24,7 @@ library(ggpubr)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Helper: code_tract_num SEM NA (missing vira categoria)
+# 1) Helper: build code_tract_num without missing values
 # ---------------------------------------------------------
 make_tract_num_no_na <- function(x){
   x_chr <- as.character(x)
@@ -49,7 +49,7 @@ tidy_term_safe <- function(model, term){
 }
 
 # ---------------------------------------------------------
-# 2) Load data (não corta antes de construir relocation t-1)
+# 2) Load data before constructing the t-1 relocation measure
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -57,10 +57,10 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 
 need <- c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract")
 miss <- setdiff(need, names(data))
-if (length(miss) > 0) stop("Faltam colunas na base: ", paste(miss, collapse = ", "))
+if (length(miss) > 0) stop("Missing required columns in the dataset: ", paste(miss, collapse = ", "))
 
 # ---------------------------------------------------------
-# 3) Variáveis "originais" (numéricas) + relocation CRUA (sem corte por treat_B)
+# 3) Create numeric baseline variables and the raw relocation measure
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -71,7 +71,7 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# Relocation CRUA: Census Tract, t-1 = lead(1[ct(t) != ct(t-1)], 1)
+# Raw relocation measure: Census Tract, t-1 = lead(1[ct(t) != ct(t-1)], 1)
 data <- data %>%
   group_by(id_estab) %>%
   arrange(year, .by_group = TRUE) %>%
@@ -89,7 +89,7 @@ data <- data %>%
   select(-ct, -ct_lag, -diff_tract) %>%
   mutate(reloc_raw = as.numeric(reloc_raw))
 
-# correção 1º ano observado (igual seu padrão)
+# Recode the first observed year from 1 to 0
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -100,12 +100,12 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# NA do reloc_raw vira 0 (missing de tract tratado como "não mudou")
+# Replace missing reloc_raw values with 0, treating missing tract transitions as no move
 data <- data %>%
   mutate(reloc_raw = if_else(is.na(reloc_raw), 0, reloc_raw))
 
 # ---------------------------------------------------------
-# 4) Trend FE (SEM NA em code_tract_num)
+# 4) Build the trend fixed effect without missing values in code_tract_num
 # ---------------------------------------------------------
 data <- data %>%
   mutate(
@@ -113,13 +113,13 @@ data <- data %>%
     code_tract_num = make_tract_num_no_na(code_tract)
   )
 
-# janela da figura
+# Figure window
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 5) Rings falsos
+# 5) Placebo control rings
 # ---------------------------------------------------------
 control_specs <- list(
   "200-210 km" = list(lower = 200, upper = 210),
@@ -149,7 +149,7 @@ for (ring in names(control_specs)) {
     group_by(id_estab) %>%
     arrange(year, .by_group = TRUE) %>%
     mutate(
-      # forward fill do treat_B_temp usando mover_ano_mun ORIGINAL (Stata)
+      # Carry treat_B_temp forward using the original municipal relocation measure
       treat_B_temp = {
         tb  <- treat_B_temp
         mov <- mover_ano_mun_orig
@@ -159,17 +159,17 @@ for (ring in names(control_specs)) {
         tb
       }
     ) %>%
-    # AGORA sim mascarar outcomes com treat_B_temp final
+    # Mask the outcomes using the final treat_B_temp definition
     mutate(
       morte_temp = if_else(is.na(treat_B_temp), NA_real_, morte_orig),
       
-      # relocation do ring vem da reloc_raw (crua), e só depois aplica regra alinhada
+      # Each ring-specific relocation measure starts from reloc_raw and is then aligned with closure
       reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_raw),
       reloc_tract_tminus1_temp = if_else(is.na(morte_temp), NA_real_, reloc_tract_tminus1_temp)
     ) %>%
     ungroup()
   
-  # dummies 2008–2012
+  # Year-specific dummies for 2008-2012
   for (y in 2008:2012) {
     v <- paste0("treat_B_temp_", y)
     temp_data[[v]] <- dplyr::case_when(
@@ -179,7 +179,7 @@ for (ring in names(control_specs)) {
     )
   }
   
-  # Post (agregado)
+  # Aggregated post-treatment indicator
   temp_data <- temp_data %>%
     mutate(
       treat_B_agg_temp = case_when(
@@ -190,13 +190,13 @@ for (ring in names(control_specs)) {
     )
   
   # -------------------------------------------------------
-  # regressões (Closure + Relocation)
+  # Estimate closure and relocation models
   # -------------------------------------------------------
   for (outcome in outcomes) {
     
     yvar <- paste0(outcome, "_temp")
     
-    # (a) Post
+    # (a) Aggregated post-treatment model
     fml_agg <- as.formula(
       paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract_num]")
     )
@@ -218,7 +218,7 @@ for (ring in names(control_specs)) {
       CI_High      = rr_agg$estimate + 1.96 * rr_agg$std.error
     )
     
-    # (b) Dummies 2008–2012
+    # (b) Year-specific models for 2008-2012
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
@@ -253,7 +253,7 @@ for (ring in names(control_specs)) {
 }
 
 # ---------------------------------------------------------
-# 6) Preparar dados e plot (2 painéis)
+# 6) Prepare plotting data for the two panels
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(

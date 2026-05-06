@@ -1,11 +1,11 @@
 ###############################################################################
-# Table F.1 - Worker Level Estimates Increasing Post-Treatment Period (ate 2016)
+# Table F.1 - Worker Level Estimates Increasing Post-Treatment Period (through 2016)
 # TREND ONLY:
 # - Panel A + Panel B
-# - 2 colunas: Emp_trend / logW_trend
-# - SEM migration
-# - Gera LaTeX direto do objeto `tab` (sem XLSX)
-# - Salva em: ./results/analysis/Tab_F1_Worker_Level_Longer_Panel.tex
+# - Two columns: Emp_trend / logW_trend
+# - Excludes migration
+# - Builds LaTeX directly from `tab`, without an intermediate XLSX file
+# - Output: ./results/analysis/Tab_F1_Worker_Level_Longer_Panel.tex
 ###############################################################################
 
 rm(list = ls())
@@ -16,20 +16,20 @@ library(dplyr)
 library(MatchIt)
 
 # -------------------------------------------------------------------
-# 0) Paths + garante pasta de saÃ­da
+# 0) Set paths and ensure the output directory exists
 # -------------------------------------------------------------------
 OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # -------------------------------------------------------------------
-# 1) Dados (expandindo atÃ© 2016)
+# 1) Load data with the sample extended through 2016
 # -------------------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2016))
 
 # -------------------------------------------------------------------
-# 2) Carrega funÃ§Ãµes (output_empregados + gen_table)
+# 2) Load helper functions (output_empregados + gen_table)
 # -------------------------------------------------------------------
 source("./results/code/read_functions.R")
 
@@ -39,8 +39,8 @@ source("./results/code/read_functions.R")
 output_trend <- output_empregados(dados, 0, 12.5, 50, 80, trend = TRUE)
 
 # -------------------------------------------------------------------
-# 4) Tabela (gen_table) e montagem (TREND ONLY; SEM migration)
-#    Esperado: term | Employment | log.Wage | ...
+# 4) Build the table from gen_table for the trend-only specification
+#    Expected columns: term | Employment | log.Wage | ...
 # -------------------------------------------------------------------
 output_trend_table <- gen_table(output_trend)
 
@@ -54,14 +54,14 @@ tab <- data.frame(
 need_cols <- c("term", "Employment_trend", "log.Wage_trend")
 miss_cols <- setdiff(need_cols, names(tab))
 if (length(miss_cols) > 0) {
-  stop(paste0("Faltam colunas em `tab`: ", paste(miss_cols, collapse = ", ")))
+  stop(paste0("Missing columns in `tab`: ", paste(miss_cols, collapse = ", ")))
 }
 
 # -------------------------------------------------------------------
-# 5) Gerar LaTeX no formato do â€œprincipalâ€ (Panel A + Panel B) â€“ TREND ONLY
+# 5) Generate LaTeX in the main-table format (Panels A and B) for the trend-only specification
 #    - Panel A: Flash Flood Post
 #    - Panel B: Flash Flood 2008 ... Flash Flood 2016
-#    - Observations: Ãºltima linha do gen_table
+#    - Observations are stored in the last row returned by gen_table
 # -------------------------------------------------------------------
 make_workers_tex_expand_post_trend_only <- function(tab,
                                                     years = 2008:2016,
@@ -76,7 +76,7 @@ make_workers_tex_expand_post_trend_only <- function(tab,
   
   body <- tab[-obs_row, , drop = FALSE]
   
-  # SAFE: se termo nÃ£o existir (ou faltar linha do SE), deixa vazio e nÃ£o quebra
+  # Leave cells blank when the term or standard-error row is missing
   get_pair_safe <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
     if (length(i) == 0 || i == nrow(body)) {
@@ -119,7 +119,7 @@ make_workers_tex_expand_post_trend_only <- function(tab,
     " Dep. Var:   & Employment &       & log Wage \\\\",
     "    \\midrule",
     row_gap2("    Flash Flood Post", c(A$est$Employment_trend, A$est$log.Wage_trend)),
-    row_gap2("                    ", c(A$se$Employment_trend,  A$se$log.Wage_trend)),
+    row_gap2("                    ", c(A$se$Employment_trend, A$se$log.Wage_trend)),
     row_gap2("    Observations", c(fmt_obs(obs_emp_trend), fmt_obs(obs_wage_trend))),
     row_gap2("    Census Tract Trend", c("Yes","Yes")),
     "  \\midrule",
@@ -134,7 +134,7 @@ make_workers_tex_expand_post_trend_only <- function(tab,
     latex <- c(
       latex,
       row_gap2(paste0("    ", est$term), c(est$Employment_trend, est$log.Wage_trend)),
-      row_gap2("                    ", c(se$Employment_trend,  se$log.Wage_trend))
+      row_gap2("                    ", c(se$Employment_trend, se$log.Wage_trend))
     )
   }
   
@@ -146,7 +146,7 @@ make_workers_tex_expand_post_trend_only <- function(tab,
     "    \\bottomrule",
     "    \\end{tabular}%",
     "    \\begin{tablenotes}[flushleft]",
-    "    \\item \\small \\textit{Notes:} This table replicates the main worker-level specifications but extends the post-treatment period through 2016 and reports only the census-tract trend specifications. The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008-2016), with 2007 as the omitted year. Worker fixed effects and year fixed effects are included in all estimations. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
+    "    \\item \\small \\textit{Notes:} This table extends the post-treatment period through 2016 and reports only the census-tract trend specifications. The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008-2016), with 2007 as the omitted year. Worker fixed effects and year fixed effects are included in all estimations. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered standard errors (year and CPF) are shown in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
     "    \\end{tablenotes}",
     " \\end{threeparttable}",
     " }",
@@ -154,7 +154,7 @@ make_workers_tex_expand_post_trend_only <- function(tab,
   )
   
   writeLines(latex, outfile)
-  cat("OK: salvou LaTeX em: ", outfile, "\n", sep = "")
+  cat("Saved LaTeX to: ", outfile, "\n", sep = "")
 }
 
 make_workers_tex_expand_post_trend_only(tab)

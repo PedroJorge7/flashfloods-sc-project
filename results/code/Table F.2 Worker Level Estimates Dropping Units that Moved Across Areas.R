@@ -1,9 +1,8 @@
 ############################################################
-## Table B.8 - Establishment-Level Estimates Dropping Units that Moved Across Areas
-## Arquivo mantido neste caminho legado, mas o conteudo pertence ao apendice B.
-## - Apenas especificaÃ§Ã£o COM tendÃªncia (Census tract trend)
-## - Outcomes: Closure (morte) e Relocation (reloc_tract_tminus1)
-## - Mesma construÃ§Ã£o do treat_B da Tabela 3
+## Table B.3 - Establishment-Level Estimates Dropping Units that Moved Across Areas
+## - Trend-only specification with Census tract trends
+## - Outcomes: Closure (morte) and Relocation (reloc_tract_tminus1)
+## - Uses the baseline establishment treatment definition
 ############################################################
 
 rm(list = ls())
@@ -18,7 +17,7 @@ library(broom)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Load (nÃ£o corta antes de construir t-1)
+# 1) Load data before constructing the t-1 relocation measure
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -27,7 +26,7 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract") %in% names(data)))
 
 # ---------------------------------------------------------
-# 2) ConstruÃ§Ã£o do tratamento (igual seu script principal)
+# 2) Build the treatment variables
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -42,7 +41,7 @@ data <- data %>%
     morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
   mutate(
-    # Stata: replace treat_B = treat_B[_n-1] if treat_B==. & mover_ano_mun==1
+    # Carry treatment status forward only for establishments that relocate across municipalities
     treat_B = {
       tb  <- treat_B
       mov <- mover_ano_mun
@@ -58,7 +57,7 @@ data <- data %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) Relocation (Census Tract, t-1) via code_tract
+# 2.1) Construct relocation (Census Tract, t-1) from code_tract
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -80,7 +79,7 @@ data <- data %>%
   ) %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# regra do 1Âº ano do id_estab
+# First-observed-year adjustment
 data <- data %>%
   group_by(id_estab) %>%
   mutate(
@@ -91,7 +90,7 @@ data <- data %>%
   ) %>%
   ungroup()
 
-# sua regra: se morte Ã© NA, reloc tambÃ©m NA (e define NA -> 0 antes disso, como no seu script)
+# Align relocation with closure by setting relocation to NA when closure is NA
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1), 0, reloc_tract_tminus1),
@@ -99,7 +98,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Dummies + tendÃªncia (igual seu script)
+# 3) Create treatment dummies and the trend term
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -131,7 +130,7 @@ for (y in 2008:2012) {
 }
 
 # ---------------------------------------------------------
-# 4) Janela da tabela + FILTRO treat_max==treat_min
+# 4) Restrict to the table window and apply the treat_max == treat_min filter
 # ---------------------------------------------------------
 data_tab3 <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
@@ -145,31 +144,31 @@ data_tab3 <- data %>%
   select(-treat_max, -treat_min)
 
 # ---------------------------------------------------------
-# 5) RegressÃµes (APENAS COM tendÃªncia)
+# 5) Estimate the trend-only regressions
 # ---------------------------------------------------------
 # Panel A (agg)
 mA_closure <- feols(morte ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                    data = data_tab3, cluster = ~ id_estab + year, lean = TRUE)
+                    data = data_tab3, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mA_reloc   <- feols(reloc_tract_tminus1 ~ treat_B_agg | id_estab + year + treat_trend[code_tract_num],
-                    data = data_tab3, cluster = ~ id_estab + year, lean = TRUE)
+                    data = data_tab3, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 # Panel B (time-varying)
 treat_vars <- paste0("treat_B_", 2008:2012, collapse = " + ")
 
 mB_closure <- feols(as.formula(paste0("morte ~ ", treat_vars, " | id_estab + year + treat_trend[code_tract_num]")),
-                    data = data_tab3, cluster = ~ id_estab + year, lean = TRUE)
+                    data = data_tab3, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 mB_reloc   <- feols(as.formula(paste0("reloc_tract_tminus1 ~ ", treat_vars, " | id_estab + year + treat_trend[code_tract_num]")),
-                    data = data_tab3, cluster = ~ id_estab + year, lean = TRUE)
+                    data = data_tab3, cluster = ~ id_estab + year, fixef.rm = "none", lean = TRUE)
 
 # ---------------------------------------------------------
-# 6) LaTeX (2 colunas: Closure+Trend | Reloc+Trend)
+# 6) Build the two-column LaTeX output
 # ---------------------------------------------------------
 get_est <- function(model, term) {
   tt <- broom::tidy(model)
   out <- tt[tt$term == term, c("estimate","std.error","p.value")]
-  if (nrow(out) == 0) stop(paste("Termo nÃ£o encontrado:", term))
+  if (nrow(out) == 0) stop(paste("Term not found:", term))
   out
 }
 stars <- function(p) ifelse(p < 0.01,"***", ifelse(p < 0.05,"**", ifelse(p < 0.1,"*","")))
@@ -184,8 +183,8 @@ mods_B <- list(mB_closure, mB_reloc)
 lines <- c(
   "\\begin{table}[htb]",
   "  \\centering",
-  "  \\tabcaption{Robustness: Removing establishments that switch between treated and control areas}",
-  "  \\label{tab:B8_remove_mobility_estab}",
+  "  \\tabcaption{Establishment-Level Estimates Dropping Units that Moved Across Areas}",
+  "  \\label{tab:B3_remove_mobility_estab}",
   "  \\scalebox{0.80}{",
   "  \\begin{threeparttable}",
   "    \\begin{tabular}{l c p{0.35cm} c}",
@@ -238,8 +237,9 @@ lines <- c(lines,
            "\\end{table}"
 )
 
-outfile <- "./results/analysis/Tab_B8_Removing_Mobility_TreatControl_Establishments.tex"
+outfile <- "./results/analysis/Table_B3_Dropping_Units_that_Moved_Across_Areas.tex"
 writeLines(lines, outfile)
+message("Saved: ", outfile)
 
 
 

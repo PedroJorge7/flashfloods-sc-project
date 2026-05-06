@@ -1,10 +1,10 @@
 ###############################################################################
 # Table E.1 - The Effect of the Flash Floods on Exposed Workers (TREND ONLY)
-# (universo de trabalhadores expostos na Ã¡rea tratada com matching)
-# - Usa output_empregados(..., exposed_workers = TRUE, trend = TRUE)
-# - SEM migration
-# - Gera LaTeX direto do objeto `tab` (sem XLSX)
-# - Salva em: ./results/analysis/Tab_E1_Effect_Exposed_Workers.tex
+# Matched sample of exposed workers in the treated area
+# - Uses output_empregados(..., exposed_workers = TRUE, trend = TRUE)
+# - Excludes migration
+# - Builds LaTeX directly from `tab`, without an intermediate XLSX file
+# - Output: ./results/analysis/Tab_E1_Effect_Exposed_Workers.tex
 ###############################################################################
 
 rm(list = ls())
@@ -21,26 +21,26 @@ OUT_DIR <- "./results/analysis"
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Dados + filtros (seu padrÃ£o)
+# 1) Load data and apply the worker sample filters
 # ---------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# 2) FunÃ§Ãµes auxiliares do projeto
+# 2) Load project helper functions
 # ---------------------------------------------------------
 source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
-# 3) Rodar outputs (TREND ONLY)
+# 3) Run the trend-only models
 # ---------------------------------------------------------
 output_trend <- output_empregados(dados, 0, 12.5, 50, 80, exposed_workers = TRUE, trend = TRUE)
 output_trend_table <- gen_table(output_trend)
 
 # ---------------------------------------------------------
-# 4) Montar tabela wide (TREND ONLY; SEM migration)
-#    gen_table geralmente retorna colunas: term | Employment | log.Wage | ...
+# 4) Build the wide table used for the trend-only specification
+#    gen_table typically returns columns such as term | Employment | log.Wage | ...
 # ---------------------------------------------------------
 tab <- data.frame(
   term             = output_trend_table[, 1],
@@ -52,11 +52,11 @@ tab <- data.frame(
 need_cols <- c("term", "Employment_trend", "log.Wage_trend")
 miss_cols <- setdiff(need_cols, names(tab))
 if (length(miss_cols) > 0) {
-  stop(paste0("Faltam colunas em `tab`: ", paste(miss_cols, collapse = ", ")))
+  stop(paste0("Missing columns in `tab`: ", paste(miss_cols, collapse = ", ")))
 }
 
 # ---------------------------------------------------------
-# 5) FunÃ§Ã£o: gerar LaTeX no formato do principal (TREND ONLY, 2 colunas)
+# 5) Generate LaTeX in the main-table format for the trend-only specification
 # ---------------------------------------------------------
 make_tex_from_table_trend_only <- function(tab,
                                            outfile,
@@ -74,7 +74,7 @@ make_tex_from_table_trend_only <- function(tab,
   get_pair_safe <- function(term_value) {
     i <- which(trimws(body$term) == term_value)
     if (length(i) == 0 || i == nrow(body)) {
-      # SAFE: se nÃ£o achar termo ou faltar linha do SE, devolve vazio
+      # Return a blank cell when the term or standard-error row is missing
       est <- data.frame(term = term_value, Employment_trend = "", log.Wage_trend = "", stringsAsFactors = FALSE)
       se  <- data.frame(term = "",        Employment_trend = "", log.Wage_trend = "", stringsAsFactors = FALSE)
       return(list(est = est, se = se))
@@ -114,7 +114,7 @@ make_tex_from_table_trend_only <- function(tab,
     " Dep. Var:   & Employment &       & log Wage \\\\",
     "    \\midrule",
     row_gap2("    Flash Flood Post", c(A$est$Employment_trend, A$est$log.Wage_trend)),
-    row_gap2("                    ", c(A$se$Employment_trend,  A$se$log.Wage_trend)),
+    row_gap2("                    ", c(A$se$Employment_trend, A$se$log.Wage_trend)),
     row_gap2("    Observations", c(fmt_obs(obs_emp_trend), fmt_obs(obs_wage_trend))),
     row_gap2("    Census Tract Trend", c("Yes", "Yes")),
     "  \\midrule",
@@ -129,7 +129,7 @@ make_tex_from_table_trend_only <- function(tab,
     latex <- c(
       latex,
       row_gap2(paste0("    ", est$term), c(est$Employment_trend, est$log.Wage_trend)),
-      row_gap2("                    ", c(se$Employment_trend,  se$log.Wage_trend))
+      row_gap2("                    ", c(se$Employment_trend, se$log.Wage_trend))
     )
   }
   
@@ -141,7 +141,7 @@ make_tex_from_table_trend_only <- function(tab,
     "    \\bottomrule",
     "    \\end{tabular}%",
     "    \\begin{tablenotes}[flushleft]",
-    "    \\item \\small \\textit{Notes:} This table reports worker-level difference-in-differences estimates for exposed workers (treatment area universe with matching). The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008-2012), with 2007 as the omitted year. Worker and year fixed effects are included in all specifications. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (establishment and year) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
+    "    \\item \\small \\textit{Notes:} This table reports worker-level difference-in-differences estimates for exposed workers (treatment area universe with matching). The outcomes are employment (column (1)) and log wage (column (2)). Panel A uses a single post-treatment dummy, whereas Panel B uses time-varying post-treatment dummies (2008-2012), with 2007 as the omitted year. Worker and year fixed effects are included in all specifications. Census-tract trend specifications include a tract-specific linear trend. Two-way clustered-robust standard errors (year and CPF) are in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.10.",
     "    \\end{tablenotes}",
     " \\end{threeparttable}",
     " }",
@@ -149,11 +149,11 @@ make_tex_from_table_trend_only <- function(tab,
   )
   
   writeLines(latex, outfile)
-  cat("OK: salvo em ", outfile, "\n", sep = "")
+  cat("Saved LaTeX to: ", outfile, "\n", sep = "")
 }
 
 # ---------------------------------------------------------
-# 6) Escrever .tex
+# 6) Write the .tex output
 # ---------------------------------------------------------
 make_tex_from_table_trend_only(
   tab     = tab,

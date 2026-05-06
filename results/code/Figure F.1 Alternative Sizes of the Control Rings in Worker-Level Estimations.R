@@ -1,8 +1,8 @@
 ############################################################
 ## Figure F.1 - Alternative Sizes of the Control Rings in Worker-Level Estimations
-## Controles (EXATAMENTE iguais ao establishment e NA MESMA ORDEM):
-##   40-70, 50-80, 30-80, 50-100  (treat fixo 0â€“12.5)
-## SaÃ­da: ./results/analysis/results_controles_empregados.png
+## Control rings displayed in a fixed order:
+##   40-70, 50-80, 30-80, 50-100 with a fixed 0-12.5 treatment radius
+## Output: ./results/analysis/results_controles_empregados.png
 ############################################################
 
 rm(list = ls())
@@ -21,7 +21,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
-# Raios (EXATAMENTE iguais)
+# Control-ring definitions
 # ---------------------------------------------------------
 control_specs <- list(
   "40-70"  = c(40, 70),
@@ -29,10 +29,10 @@ control_specs <- list(
   "50-100" = c(50, 100)
 )
 
-# ORDEM OBRIGATÃ“RIA (a que vocÃª pediu)
+# Plot the control rings in a fixed order
 radius_levels <- c("40-70 km",  "30-80 km", "50-100 km")
 
-# Paleta (EXATAMENTE)
+# Fixed palette
 control_colors <- c(
   "40-70 km"  = "#FCBBA1",
   "30-80 km"  = "#FB6A4A",
@@ -40,16 +40,16 @@ control_colors <- c(
 )
 
 # ---------------------------------------------------------
-# Dados + filtros
+# Load data and apply filters
 # ---------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
-if (nrow(dados) == 0) stop("Workers: `dados` ficou vazio apÃ³s filtros.")
+if (nrow(dados) == 0) stop("Workers: `dados` is empty after filtering.")
 
 # ---------------------------------------------------------
-# Helper: garante tipos numÃ©ricos (evita plot sumir)
+# Helper: enforce numeric types to keep the plot stable
 # ---------------------------------------------------------
 clean_output_for_plot <- function(df) {
   df %>%
@@ -64,7 +64,7 @@ clean_output_for_plot <- function(df) {
 }
 
 # ---------------------------------------------------------
-# Rodar outputs por anel (treat fixo 0â€“12.5)
+# Run the worker regressions for each control ring
 # ---------------------------------------------------------
 outputs_list <- lapply(names(control_specs), function(k) {
   lo <- control_specs[[k]][1]
@@ -79,30 +79,30 @@ outputs_list <- lapply(names(control_specs), function(k) {
 })
 
 output_raw <- bind_rows(outputs_list)
-if (nrow(output_raw) == 0) stop("Workers: `output_raw` ficou vazio.")
+if (nrow(output_raw) == 0) stop("Workers: `output_raw` is empty.")
 
 # ---------------------------------------------------------
-# Filtrar + construir radius + ordenar
+# Filter, build the radius labels, and order the results
 # ---------------------------------------------------------
 output <- output_raw %>%
   filter(type == "type_treatment") %>%
   mutate(
     parmseq = gsub("^Flash Flood\\s+", "", as.character(parmseq)),
     
-    # garante string no formato "40-70 km" etc.
+    # Build labels such as "40-70 km"
     control_chr = gsub("\\s+", "", as.character(control)),
     radius      = paste0(control_chr, " km"),
     
-    # FORÃ‡A ORDEM AQUI
+    # Enforce the fixed ordering in the plot
     radius      = factor(radius, levels = radius_levels)
   ) %>%
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-if (nrow(output) == 0) stop("Workers: `output` ficou vazio apÃ³s filtros/conversÃµes.")
+if (nrow(output) == 0) stop("Workers: `output` is empty after filtering and type conversion.")
 
 # ---------------------------------------------------------
-# Plot (ordem e cores FORÃ‡ADAS via breaks/limits)
+# Plot with fixed ordering and colors via breaks and limits
 # ---------------------------------------------------------
 plot_one <- function(reg) {
   dd <- output %>% filter(Regression == reg)
@@ -117,8 +117,8 @@ plot_one <- function(reg) {
     scale_y_discrete(limits = c("Post","2008","2009","2010","2011","2012")) +
     scale_color_manual(
       values = control_colors,
-      breaks = radius_levels,   # <- ORDEM DA LEGENDA
-      limits = radius_levels,   # <- ORDEM FIXA (mesmo se faltar nÃ­vel)
+      breaks = radius_levels,   # Keep the legend order fixed
+      limits = radius_levels,   # Keep the plotting order fixed even when levels are missing
       drop   = FALSE
     ) +
     coord_flip() +
@@ -129,15 +129,15 @@ plot_one <- function(reg) {
 
 reg_names <- unique(output$Regression)
 
-# se tiver emp/wage, foca neles (senÃ£o plota tudo)
+# Focus on employment and wage when available; otherwise plot all available panels
 keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
 if (length(keep) > 0) reg_names <- keep
 
 plots_list <- lapply(reg_names, plot_one)
-if (length(plots_list) == 0) stop("Workers: nenhum painel para plotar.")
+if (length(plots_list) == 0) stop("Workers: no panels are available to plot.")
 
 # ---------------------------------------------------------
-# 1 linha
+# Arrange the panels in a single row
 # ---------------------------------------------------------
 nplots <- length(plots_list)
 fig <- ggpubr::ggarrange(

@@ -1,18 +1,18 @@
 \begin{table}[htb]
   \centering
   \tabcaption{The Effect of the Flash Floods on the Spatial Distribution of Establishments}
-  \label{tab3: main_results}
-  \scalebox{0.75}{
- \begin{threeparttable}
+  \label{tab3:main_results}
+  \scalebox{0.80}{
+  \begin{threeparttable}
     \begin{tabular}{lccccccc}
     \toprule
           & (1)   &       & (2)   &       & (3)   &       & (4) \\
 \cmidrule(lr){2-2}\cmidrule(lr){4-4}\cmidrule(lr){6-6}\cmidrule(lr){8-8}
-    \multicolumn{8}{l}{\textbf{Panel A: Time-Agregatted DiD}}\\
+    \multicolumn{8}{l}{\textbf{Panel A: Time-Aggregated DiD}}\\
     Dep. Var: & Closure & & Closure & & Relocation & & Relocation \\
-   \midrule
+    \midrule
     Flash Flood Post & 0.00860*** &  & 0.01399*** &  & -0.00019 &  & -0.00099\\
-                      & (0.00159) &  & (0.00225) &  & (0.00090) &  & (0.00087)\\
+                      & (0.00203) &  & (0.00247) &  & (0.00070) &  & (0.00087)\\
     Observations & 367{,}402 &  & 367{,}402 &  & 367{,}402 &  & 367{,}402\\
     Census Tract Trend & No &  & Yes &  & No &  & Yes\\
     \midrule
@@ -29,13 +29,14 @@
                       & (0.00363) &  & (0.00450) &  & (0.00093) &  & (0.00092)\\
     Flash Flood 2012 & 0.01389*** &  & 0.01927*** &  & 0.00070 &  & -0.00008\\
                       & (0.00341) &  & (0.00407) &  & (0.00091) &  & (0.00093)\\
+    \midrule
     Observations & 367{,}402 &  & 367{,}402 &  & 367{,}402 &  & 367{,}402\\
     Census Tract Trend & No &  & Yes &  & No &  & Yes\\
     \bottomrule
     \end{tabular}%
     \begin{tablenotes}[flushleft]
-    \item \small Notes: This table shows difference-in-differences estimates for closure (columns (1) and (2)) and relocation (columns (3) and (4)). Relocation is defined by \texttt{mover\_ano\_mun}. The treatment radius ranges from 0 to 12.5 km to flood spots and the control ring is between 50--80 km. Establishment and year fixed effects are included in all estimations. The two-way clustered-robust standard errors at the establishment and year level are in parentheses. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.
+    \item \small Notes: This table follows the baseline Stata specification in \texttt{script\_sc\_final\_review.do}. Columns (1) and (2) use establishment closure, and columns (3) and (4) use municipal relocation (\texttt{mover\_ano\_mun}). Establishment and year fixed effects are included in all models. Panel A uses one-way clustered standard errors at the establishment level, matching the Stata workflow. Panel B uses two-way clustered standard errors at the establishment and year levels. The treatment radius is 0--12.5 km and the control ring is 50--80 km. *** p $<$ 0.01, ** p $<$ 0.05, * p $<$ 0.1.
     \end{tablenotes}
-    \end{threeparttable}
-    }
+  \end{threeparttable}
+  }
 \end{table}%

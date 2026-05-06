@@ -1,13 +1,13 @@
 ############################################################
-## Figure 4 – Event Study: Effect of the Flash Floods
+## Figure 4 - Event Study: Effect of the Flash Floods
 ##             on the Spatial Distribution of Establishments
 ##
 ## Relocation = Census Tract, t-1 (via code_tract)
-## - Replica o tratamento (treat_B) do Figure 3 / Stata
-## - Constrói reloc_tract_tminus1 como: 1 em t se muda entre t e t+1
-##   (lead da mudança contemporânea) — SEM default=0 (fica NA no último ano)
-## - Usa FE: id_estab + year + treat_trend_f[code_tract_num]
-## - Eixo Y definido pelos ICs (min/max) + folga
+## - Defines treatment with the 0-12.5 km exposure radius and the 50-80 km control ring
+## - Defines reloc_tract_tminus1 as 1 in year t when the establishment moves between t and t+1
+##   using the lead of the contemporaneous relocation indicator, with no default fill
+## - Uses fixed effects: id_estab + year + treat_trend_f[code_tract_num]
+## - Sets the y-axis from the confidence interval bounds with a small margin
 ############################################################
 
 rm(list = ls())
@@ -23,12 +23,12 @@ library(ggpubr)
 library(broom)
 
 # ---------------------------------------------------------
-# 0) Garantir diretórios de saída
+# 0) Ensure the output directories exist
 # ---------------------------------------------------------
 dir.create("./establishments/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Carregar base – NÃO cortar em 2012 antes de construir t-1
+# 1) Load the full panel before constructing t-1 measures
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   filter(year >= 2003) %>%
@@ -37,7 +37,7 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract") %in% names(data)))
 
 # ---------------------------------------------------------
-# 2) Replicar construção de tratamento (igual ao Figure 3 / Stata)
+# 2) Build the treatment variables
 # ---------------------------------------------------------
 data <- data %>%
   arrange(id_estab, year) %>%
@@ -53,19 +53,19 @@ data <- data %>%
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
   mutate(
-    # garantir numérico (evita haven_labelled)
+    # Coerce to numeric to avoid haven_labelled issues
     morte        = as.numeric(haven::zap_labels(morte)),
     mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
     
-    # outcomes NA onde treat_B é missing (como no Stata)
+    # Set outcomes to missing outside the analysis bands
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if_else(is.na(treat_B), NA_real_, new_firm)
   ) %>%
   mutate(
-    # bysort id_estab (year): replace treat_B = treat_B[_n-1] if treat_B==. & mover_ano_mun==1
+    # Carry treatment status forward only for establishments that relocate across municipalities
     treat_B = {
       tb  <- treat_B
-      mov <- mover_ano_mun  # usa mover_ano_mun "bruto", como no Stata
+      mov <- mover_ano_mun  # Use the original municipal relocation indicator here
       for (i in seq_along(tb)) {
         if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
           tb[i] <- tb[i - 1]
@@ -75,12 +75,12 @@ data <- data %>%
     }
   ) %>%
   mutate(
-    # replace mover_ano_mun = . if treat_B == .
+    # Set mover_ano_mun to missing outside the analysis bands
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
-# Se existirem essas variáveis na base, aplica o mesmo corte
+# Apply the same restriction to these variables if they are available
 if ("mover_ano_tract" %in% names(data)) {
   data <- data %>%
     mutate(mover_ano_tract = if_else(is.na(treat_B), NA_real_, mover_ano_tract))
@@ -90,7 +90,7 @@ if ("mover_ano_cep" %in% names(data)) {
     mutate(mover_ano_cep = if_else(is.na(treat_B), NA_real_, mover_ano_cep))
 }
 
-# Tendência pós-choque (igual ao Stata: year >= 2008)
+# Post-shock trend indicator (year >= 2008)
 data <- data %>%
   mutate(
     treat_trend   = if_else(year >= 2008, 1, 0),
@@ -98,10 +98,10 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) Construir reloc_tract_tminus1 via code_tract (Census Tract, t-1)
-#     - diff_tract(t) = 1 se ct(t) != ct(t-1), NA se não dá pra definir
-#     - reloc_tract_tminus1(t) = diff_tract(t+1)  (mudança entre t e t+1)
-#       (SEM default=0; fica NA no último ano)
+# 3) Construct reloc_tract_tminus1 from code_tract (Census Tract, t-1)
+#     - diff_tract(t) = 1 if ct(t) != ct(t-1), and NA when it cannot be defined
+#     - reloc_tract_tminus1(t) = diff_tract(t+1), capturing moves between t and t+1
+#       with no default fill, so the last year remains NA
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -116,7 +116,7 @@ data <- data %>%
       TRUE                      ~ 0
     ),
     
-    reloc_tract_tminus1 = dplyr::lead(diff_tract, 1)  # NA no último ano do id_estab
+    reloc_tract_tminus1 = dplyr::lead(diff_tract, 1)  # Remains NA in the last observed year for each establishment
   ) %>%
   ungroup() %>%
   mutate(
@@ -126,26 +126,26 @@ data <- data %>%
   select(-ct, -ct_lag, -diff_tract)
 
 # ---------------------------------------------------------
-# 4) Amostra 2003–2012 com treat_B definido
+# 4) Restrict to the 2003-2012 sample with defined treat_B
 # ---------------------------------------------------------
 data_es <- data %>%
   group_by(id_estab) |> 
   mutate(reloc_tract_tminus1 = ifelse(year == min(year, na.rm = T) & reloc_tract_tminus1 == 1,0,reloc_tract_tminus1)) |> 
   filter(year >= 2003 & year <= 2012, !is.na(treat_B))
 
-# Opcional (igual ao seu padrão novo): se fechamento é NA, relocation também vira NA
+# Optionally align the relocation sample with closure by setting relocation to NA when closure is NA
 data_es <- data_es %>%
   mutate(reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1),0,reloc_tract_tminus1),
          reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1))
 
 # ---------------------------------------------------------
-# 4.1) Preparar code_tract_num (slope precisa ser numérico no fixest)
+# 4.1) Prepare code_tract_num for varying slopes in fixest
 # ---------------------------------------------------------
 data_es <- data_es %>%
   mutate(code_tract_num = suppressWarnings(as.numeric(as.character(code_tract))))
 
 # ---------------------------------------------------------
-# 5) Dummies ano-específicas de tratamento (baseline = 2007)
+# 5) Year-specific treatment dummies (baseline = 2007)
 # ---------------------------------------------------------
 for (y in 2003:2012) {
   var <- paste0("treat_B_", y)
@@ -159,7 +159,7 @@ for (y in 2003:2012) {
 treat_years <- c(2003:2006, 2008:2012)
 
 # ---------------------------------------------------------
-# 6) Estimar event study (Closure + Relocation Tract t-1)
+# 6) Estimate the event-study models for closure and Census Tract relocation
 # ---------------------------------------------------------
 outcomes <- c("morte", "reloc_tract_tminus1")
 outcome_labels <- c(
@@ -176,14 +176,14 @@ for (outcome in outcomes) {
   y_non_na <- yv[!is.na(yv)]
   
   if (length(y_non_na) < 2 || length(unique(y_non_na)) <= 1) {
-    message("Outcome '", outcome, "' é constante ou quase; pulando.")
+    message("Outcome '", outcome, "' is constant or nearly constant; skipping.")
     next
   }
   
   treat_vars_str <- paste0("treat_B_", treat_years, collapse = " + ")
   formula_str    <- paste(outcome, "~", treat_vars_str)
   
-  # FE: id_estab + year + (treat_trend_f com slope em code_tract_num)
+  # Fixed effects: id_estab + year + treat_trend_f with varying slopes in code_tract_num
   fml <- as.formula(paste0(
     formula_str,
     " | id_estab + year + treat_trend_f[code_tract_num]"
@@ -224,13 +224,13 @@ for (outcome in outcomes) {
 }
 
 if (nrow(all_coefs) == 0) {
-  stop("Nenhum outcome com variação suficiente para estimar o event study.")
+  stop("No outcome has enough variation to estimate the event study.")
 }
 
 output <- all_coefs %>% arrange(Regression, parmseq)
 
 # ---------------------------------------------------------
-# 7) Limites do eixo Y a partir dos ICs (min/max) + folga
+# 7) Set y-axis limits from the confidence interval bounds
 # ---------------------------------------------------------
 y_min   <- min(output$min, na.rm = TRUE)
 y_max   <- max(output$max, na.rm = TRUE)
@@ -240,7 +240,7 @@ pad <- if (is.finite(y_range) && y_range > 0) 0.05 * y_range else 0
 y_limits <- c(y_min - pad, y_max + pad)
 
 # ---------------------------------------------------------
-# 8) Plot com y dinâmico
+# 8) Plot with dynamic y-axis limits
 # ---------------------------------------------------------
 event_study_plot <- function(reg_name) {
   output %>%

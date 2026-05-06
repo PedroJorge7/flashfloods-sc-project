@@ -36,12 +36,12 @@
     Flash Flood 2015 & 0.02024*** &       & 0.00181\\
                       & (0.00469) &       & (0.00206)\\
     Flash Flood 2016 & 0.01982*** &       & -0.00559**\\
-                      & (0.00459) &       & (0.00186)\\
+                      & (0.00459) &       & (0.00187)\\
     Observations & 554{,}055 &       & 554{,}055\\
     Census Tract Trend & Yes &       & Yes\\
     \bottomrule
     \end{tabular}%
-   	\begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table extends the post-treatment period through 2016 relative to the baseline specification and reports only the versions including census tract trends via varying slopes (treat\_trend[code\_tract\_num]). Closure is measured by \textit{morte}. Relocation is defined as \textit{Census Tract, t-1}: $reloc\_tract\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \texttt{code\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\_tract\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy (treat\_B\_agg); Panel B uses time-varying treatment dummies (2008--2016). The treatment radius ranges from 0 to 12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered-robust standard errors (establishment and year) in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+   	\begin{tablenotes}[flushleft] \item \small \textit{Notes:} This table reports specifications with the post-treatment period extended through 2016 and includes census tract trends via varying slopes (treat\_trend[code\_tract\_num]). Closure is measured by \textit{morte}. Relocation is defined as \textit{Census Tract, t-1}: $reloc\_tract\_tminus1(t)=1$ if the establishment changes census tract between $t$ and $t+1$ (constructed from \texttt{code\_tract} using a lead of the tract-change indicator), with the first observed year forced to have $reloc\_tract\_tminus1=0$ when it would otherwise be 1. Panel A uses a single post-treatment dummy (treat\_B\_agg); Panel B uses time-varying treatment dummies (2008--2016). The treatment radius is 0--12.5 km and the control ring is 50--80 km. Establishment and year fixed effects are included in all estimations. Two-way clustered standard errors (establishment and year) are shown in parentheses. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
    	\end{tablenotes}
    	\end{threeparttable}
    	}

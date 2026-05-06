@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Figure 3: The Disaster Coverage Area of the 2008 Santa Catarina Flash Floods
 # ============================================================================
 
@@ -15,20 +15,16 @@ dir.create('./results/analysis', recursive = TRUE, showWarnings = FALSE)
 # Load map data
 # ============================================================================
 
-# Load the map file (should be provided as shapefile or similar)
-# This assumes you have the map data available
+# Load the spatial data source for the figure, such as a shapefile
+# Update the file path below to match the local data source
 
-# For now, creating a placeholder that loads the map
-# In practice, you would load your actual map data
-
-# Example: Loading from a shapefile
+# Example: load a shapefile
 # map_data <- sf::st_read("path/to/map.shp")
 
 # ============================================================================
 # Create map visualization
 # ============================================================================
 
-# This is a placeholder - actual implementation depends on your map data structure
 # The map should show:
 # - The affected municipalities in gray
 # - The location of Santa Catarina in Latin America
@@ -55,8 +51,8 @@ ggsave(
   units = "in"
 )
 
-cat("Figure 3 saved: ./results/analysis/Fig_03_Disaster_Coverage_Area.png\n")
-cat("Note: This requires actual map data. Please provide shapefile or map data.\n")
+cat("Saved figure: ./results/analysis/Fig_03_Disaster_Coverage_Area.png\n")
+cat("Provide the spatial input files before running the final map version.\n")
 
 
 

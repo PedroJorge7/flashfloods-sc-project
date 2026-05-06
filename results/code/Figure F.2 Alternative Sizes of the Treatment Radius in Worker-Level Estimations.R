@@ -1,10 +1,10 @@
 ############################################################
 ## Figure F.2 - Alternative Sizes of the Treatment Radius in Worker-Level Estimations
-## Tratamentos: 2.5 7.5 17.5 22.5 30 (control fixo 50â€“80)
-## SaÃ­da: ./results/analysis/change_treatment_empregados.png
-## AJUSTES:
-##  - Cores padrÃ£o (paleta nomeada pelos nÃ­veis do radius)
-##  - PainÃ©is em apenas 1 linha (ggarrange nrow = 1)
+## Treatment radii: 2.5, 7.5, 17.5, 22.5, and 30 with a fixed 50-80 km control ring
+## Output: ./results/analysis/change_treatment_empregados.png
+## Plot notes:
+##  - Uses a fixed named palette for the radius levels
+##  - Arranges the panels in a single row (ggarrange nrow = 1)
 ############################################################
 
 rm(list = ls())
@@ -22,7 +22,7 @@ dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 source("./results/code/read_functions.R")
 
 # ---------------------------------------------------------
-# Paleta padrÃ£o (NOMES = nÃ­veis do radius)
+# Fixed palette keyed to the radius levels
 # ---------------------------------------------------------
 treat_colors <- c(
   "0-2.5 km"  = "#FEE0D2",
@@ -33,14 +33,14 @@ treat_colors <- c(
 )
 
 # ---------------------------------------------------------
-# Dados + filtros
+# Load data and apply filters
 # ---------------------------------------------------------
 dados <- readRDS(data_path("workers_clean_data.rds")) %>%
   filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE) %>%
   filter(between(year, 2002, 2012))
 
 # ---------------------------------------------------------
-# Helper: garante tipos numÃ©ricos (evita plot â€œsumirâ€)
+# Helper: enforce numeric types so the plot renders correctly
 # ---------------------------------------------------------
 clean_output_for_plot <- function(df) {
   df %>%
@@ -55,7 +55,7 @@ clean_output_for_plot <- function(df) {
 }
 
 # ---------------------------------------------------------
-# Rodar outputs por raio de TRATAMENTO (control fixo 50â€“80)
+# Run the worker regressions for each treatment radius
 # ---------------------------------------------------------
 output_empregados_2_5  <- output_empregados(dados, 0,  2.5, 50, 80, trend = TRUE)
 output_empregados_7_5  <- output_empregados(dados, 0,  7.5, 50, 80, trend = TRUE)
@@ -79,10 +79,10 @@ output <- bind_rows(
   clean_output_for_plot() %>%
   arrange(parmseq, radius)
 
-if (nrow(output) == 0) stop("Robustez 2: `output` ficou vazio depois dos filtros/conversÃµes.")
+if (nrow(output) == 0) stop("Robustness check 2: `output` is empty after filtering and type conversion.")
 
 # ---------------------------------------------------------
-# Plot (comparando raios no MESMO painel, com cores padrÃ£o)
+# Plot the alternative treatment radii in the same panel
 # ---------------------------------------------------------
 plot_one <- function(reg) {
   dd <- output %>% filter(Regression == reg)
@@ -104,14 +104,14 @@ plot_one <- function(reg) {
 
 reg_names <- unique(output$Regression)
 
-# se tiver emp/wage, foca neles (senÃ£o plota tudo que existir)
+# Focus on employment and wage when available; otherwise plot all available panels
 keep <- reg_names[grepl("Employment|Wage|emp|wage", reg_names, ignore.case = TRUE)]
 if (length(keep) > 0) reg_names <- keep
 
 plots_list <- lapply(reg_names, plot_one)
 
 # ---------------------------------------------------------
-# AJUSTE: montar em apenas 1 linha
+# Arrange the panels in a single row
 # ---------------------------------------------------------
 nplots <- length(plots_list)
 fig <- ggpubr::ggarrange(

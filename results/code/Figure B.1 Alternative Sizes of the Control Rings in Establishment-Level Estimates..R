@@ -1,11 +1,11 @@
 # ============================================================================
 # Figure B.1: Alternative Sizes of the Control Rings in Establishment-Level Estimates
-#   AJUSTE: Relocation = reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
-#   IMPORTANTE: reloc_tract_tminus1 Ã© construÃ­do ANTES do corte 2003â€“2012
-#   CONTROL RINGS (fixos):
+#   Relocation is defined as reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
+#   reloc_tract_tminus1 is constructed before restricting the sample to 2003-2012
+#   Control rings:
 #     40-70, 50-80, 30-80, 50-100
-#   TESTES: diagnÃ³stico por anel (N obs, N firmas, shares, etc.)
-#   CLUSTER: 2-way (id_estab + year) em TODOS os modelos
+#   Diagnostics are reported for each ring (observations, firms, shares, etc.)
+#   Two-way clustering (id_estab + year) is used in all models
 # ============================================================================
 
 rm(list = ls())
@@ -26,7 +26,7 @@ library(ggpubr)
 dir.create("results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# Helper: code_tract -> num (p/ varying slopes)
+# Helper: convert code_tract to numeric for varying slopes
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -42,29 +42,29 @@ make_tract_num <- function(x) {
 }
 
 # ---------------------------------------------------------
-# TEST helpers
+# Diagnostic helpers
 # ---------------------------------------------------------
 assert_has_cols <- function(df, cols) {
   miss <- setdiff(cols, names(df))
-  if (length(miss) > 0) stop("FALTAM COLUNAS NA BASE: ", paste(miss, collapse = ", "))
+  if (length(miss) > 0) stop("Missing required columns in the dataset: ", paste(miss, collapse = ", "))
   invisible(TRUE)
 }
 
 quick_binary_check <- function(x, name) {
   ok <- all(is.na(x) | x %in% c(0, 1))
-  if (!ok) stop("VARIÃVEL NÃƒO BINÃRIA: ", name, " (esperado 0/1/NA)")
+  if (!ok) stop("Variable is not binary: ", name, " (expected 0/1/NA)")
   invisible(TRUE)
 }
 
 validate_rings <- function(control_specs) {
   nm <- names(control_specs)
-  if (anyDuplicated(nm)) stop("RINGS DUPLICADOS EM control_specs.")
+  if (anyDuplicated(nm)) stop("Duplicate rings found in control_specs.")
   for (k in nm) {
     lo <- control_specs[[k]]$lower
     up <- control_specs[[k]]$upper
-    if (is.null(lo) || is.null(up)) stop("Ring sem lower/upper: ", k)
-    if (!is.numeric(lo) || !is.numeric(up)) stop("Ring lower/upper nÃ£o numÃ©rico: ", k)
-    if (!(lo < up)) stop("Ring invÃ¡lido (lower >= upper): ", k)
+    if (is.null(lo) || is.null(up)) stop("Ring is missing a lower or upper bound: ", k)
+    if (!is.numeric(lo) || !is.numeric(up)) stop("Ring bounds must be numeric: ", k)
+    if (!(lo < up)) stop("Invalid ring: lower bound must be smaller than upper bound: ", k)
   }
   invisible(TRUE)
 }
@@ -83,7 +83,7 @@ ring_diagnostics <- function(df, ring_label) {
 }
 
 # ---------------------------------------------------------
-# 0) CONTROL RINGS (AJUSTADO: 60-80 -> 30-80)
+# 0) Control ring definitions
 # ---------------------------------------------------------
 control_specs <- list(
   "40-70 km"  = list(lower = 40, upper = 70),
@@ -94,12 +94,12 @@ validate_rings(control_specs)
 
 outcomes <- c("morte", "reloc_tract_tminus1")
 
-# thresholds para nÃ£o rodar anel sem massa
+# Minimum thresholds to avoid estimating empty rings
 MIN_FIRMS <- 200
 MIN_OBS   <- 2000
 
 # ---------------------------------------------------------
-# 1) Carregar base (SEM cortar ainda)
+# 1) Load data without restricting the sample yet
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   arrange(id_estab, year)
@@ -107,8 +107,8 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 assert_has_cols(data, c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract"))
 
 # ---------------------------------------------------------
-# 1.1) Construir relocation correto ANTES do corte:
-#      reloc_tract_tminus1(t) = 1 se muda entre t e t+1 (via code_tract)
+# 1.1) Construct reloc_tract_tminus1 before restricting the sample:
+#      reloc_tract_tminus1(t) = 1 if the establishment moves between t and t+1
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -137,14 +137,14 @@ data <- data %>%
 quick_binary_check(data$reloc_tract_tminus1, "reloc_tract_tminus1 (raw, pre-cut)")
 
 # ---------------------------------------------------------
-# 2) AGORA sim: manter somente 2003â€“2012
+# 2) Restrict the sample to 2003-2012
 # ---------------------------------------------------------
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 3) ConstruÃ§Ã£o-base (guardar originais + tendÃªncia + tract num)
+# 3) Build the baseline variables, including originals, trend terms, and numeric tract IDs
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -190,7 +190,7 @@ quick_binary_check(data$morte, "morte (in-sample)")
 quick_binary_check(data$reloc_tract_tminus1, "reloc_tract_tminus1 (in-sample)")
 
 # ---------------------------------------------------------
-# 4) Loop sobre anÃ©is e outcomes
+# 4) Loop over control rings and outcomes
 # ---------------------------------------------------------
 all_results <- data.frame()
 diag_table  <- data.frame()
@@ -260,7 +260,7 @@ for (ring in names(control_specs)) {
     ))
   }
   
-  # dummies 2008â€“2012 + agregado
+  # Annual dummies for 2008-2012 plus the aggregated post-treatment indicator
   for (y in 2008:2012) {
     var <- paste0("treat_B_temp_", y)
     temp_data[[var]] <- dplyr::case_when(
@@ -283,7 +283,7 @@ for (ring in names(control_specs)) {
     
     yvar <- paste0(outcome, "_temp")
     
-    # (1) Post agregado â€” cluster 2-way
+    # (1) Aggregated post-treatment specification with two-way clustering
     fml_agg <- as.formula(
       paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract_num]")
     )
@@ -307,7 +307,7 @@ for (ring in names(control_specs)) {
         nobs         = nobs(m_agg)
       )
     
-    # (2) Evento 2008â€“2012 â€” cluster 2-way
+    # (2) Event-study specification for 2008-2012 with two-way clustering
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
@@ -339,17 +339,17 @@ for (ring in names(control_specs)) {
 }
 
 # ---------------------------------------------------------
-# 5) Salvar diagnÃ³sticos
+# 5) Save diagnostics
 # ---------------------------------------------------------
 # write.csv(diag_table,  "results/analysis/control_rings_diagnostics.csv", row.names = FALSE)
 # write.csv(all_results, "results/analysis/control_rings_coeffs.csv",      row.names = FALSE)
 
 if (nrow(all_results) == 0) {
-  stop("Nenhuma regressÃ£o rodou (todos os anÃ©is caÃ­ram nos testes MIN_FIRMS/MIN_OBS). Veja diagnostics CSV.")
+  stop("No regression was estimated because all rings failed the MIN_FIRMS or MIN_OBS checks. See the diagnostics CSV.")
 }
 
 # ---------------------------------------------------------
-# 6) Preparar dados e painÃ©is A/B
+# 6) Prepare the plotting data for Panels A and B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(
@@ -406,7 +406,7 @@ fig_ctrl <- ggpubr::ggarrange(
 )
 
 # ---------------------------------------------------------
-# 7) Salvar figura
+# 7) Save the figure
 # ---------------------------------------------------------
 ggsave(
   filename = "results/analysis/results_controles.png",

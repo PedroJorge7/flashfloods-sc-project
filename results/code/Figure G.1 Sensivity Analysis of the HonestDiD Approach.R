@@ -20,11 +20,26 @@ library(broom)
 
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
-data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
-  filter(year >= 2003 & year <= 2012) %>%
-  arrange(id_estab, year)
+carry_treatment_forward <- function(treat, mover) {
+  out <- treat
 
-data <- data %>%
+  for (i in seq_along(out)) {
+    if (i > 1 && is.na(out[i]) && !is.na(mover[i]) && mover[i] == 1) {
+      out[i] <- out[i - 1]
+    }
+  }
+
+  out
+}
+
+data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
+  filter(year >= 2003) %>%
+  mutate(
+    morte = as.numeric(haven::zap_labels(morte)),
+    new_firm = as.numeric(haven::zap_labels(new_firm)),
+    mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun))
+  ) %>%
+  arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
     treat_B = case_when(
@@ -32,24 +47,24 @@ data <- data %>%
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun))
+    morte_orig = morte,
+    new_firm_orig = new_firm,
+    mover_ano_mun_orig = mover_ano_mun
   ) %>%
   mutate(
-    treat_B = {
-      tb <- treat_B
-      mov <- mover_ano_mun
-      for (i in seq_along(tb)) {
-        if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
-          tb[i] <- tb[i - 1]
-        }
-      }
-      tb
-    }
+    morte = if_else(is.na(treat_B), NA_real_, morte_orig),
+    new_firm = if_else(is.na(treat_B), NA_real_, new_firm_orig)
+  ) %>%
+  mutate(
+    treat_B = carry_treatment_forward(treat_B, mover_ano_mun_orig),
+    mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun_orig)
   ) %>%
   ungroup() %>%
-  filter(!is.na(treat_B)) %>%
+  filter(year >= 2003 & year <= 2012) %>%
   mutate(
-    treated = as.integer(treat_B == 1),
+    mover_ano_mun = if_else(is.na(mover_ano_mun), 0, mover_ano_mun),
+    mover_ano_mun = if_else(is.na(morte), NA_real_, mover_ano_mun),
+    treated = if_else(!is.na(treat_B), as.integer(treat_B == 1), NA_integer_),
     post = as.integer(year >= 2008)
   )
 
@@ -66,9 +81,10 @@ estimate_bounds <- function(df, outcome) {
     filter(!is.na(outcome_value))
   
   did_model <- feols(
-    outcome_value ~ treated * post | id_estab + year,
+    outcome_value ~ treated:post | id_estab + year,
     data = outcome_data,
     cluster = ~ id_estab,
+    fixef.rm = "none",
     lean = TRUE
   )
   
@@ -79,6 +95,7 @@ estimate_bounds <- function(df, outcome) {
     outcome_value ~ i(year, treated, ref = 2007) | id_estab + year,
     data = outcome_data %>% filter(year < 2008),
     cluster = ~ id_estab,
+    fixef.rm = "none",
     lean = TRUE
   )
   

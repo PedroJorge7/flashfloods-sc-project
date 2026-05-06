@@ -1,10 +1,10 @@
 # ============================================================================
 # Figure B.3: Establishment-Level Estimates Using Alternative Inference Procedures
-# NOVA DEFINIÃ‡ÃƒO: Relocation = Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
-# - inclui lead()
-# - inclui correÃ§Ã£o do 1Âº ano do id_estab
-# - inclui regra: se morte Ã© NA => relocation NA
-# - FE tendÃªncia: treat_trend_f[code_tract_num]  (ordem correta no fixest)
+# Relocation is defined as Census Tract, t-1 (reloc_tract_tminus1 via code_tract)
+# - Uses lead() to align moves between t and t+1
+# - Recode the first observed year from 1 to 0
+# - Set relocation to NA when closure is NA
+# - Uses the trend fixed effect treat_trend_f[code_tract_num]
 # ============================================================================
 
 rm(list = ls())
@@ -25,7 +25,7 @@ library(ggpubr)
 dir.create("./results/analysis", recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------
-# 1) Carregar base correta (com coordenadas)
+# 1) Load the dataset with coordinates
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("firm_coordinates.dta")) %>%
   mutate(
@@ -37,36 +37,36 @@ data <- haven::read_dta(data_path("firm_coordinates.dta")) %>%
 
 stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract","lat","lon") %in% names(data)))
 
-# se tiver coordenadas faltando, Conley pode falhar -> corta
+# Conley standard errors require coordinates, so drop observations with missing coordinates
 data <- data %>%
   filter(!is.na(lat), !is.na(lon))
 
 # ---------------------------------------------------------
-# 2) Tratamento (igual Table 3 / Stata) + variÃ¡veis base
+# 2) Build the treatment variables and baseline outcomes
 # ---------------------------------------------------------
 data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal (0â€“12.5 km vs 50â€“80 km)
+    # Main treatment definition: 0-12.5 km vs 50-80 km
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    # guardar originais
+    # Preserve original variables for reference
     morte_orig         = morte,
     mover_ano_mun_orig = mover_ano_mun
   ) %>%
   mutate(
-    # garantir numÃ©rico (evita haven_labelled)
+    # Coerce to numeric to avoid haven_labelled issues
     morte         = as.numeric(haven::zap_labels(morte)),
     mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
-    mover_raw     = mover_ano_mun,  # usado no forward fill do treat_B (como Stata)
-    # outcomes = NA onde treat_B Ã© missing
+    mover_raw     = mover_ano_mun,  # Used when carrying treat_B forward
+    # Set outcomes to missing outside the analysis bands
     morte = if_else(is.na(treat_B), NA_real_, morte)
   ) %>%
-  # forward fill do treat_B usando mover_ano_mun "bruto" (como Stata)
+  # Carry treatment status forward using the original municipal relocation measure
   mutate(
     treat_B = {
       tb  <- treat_B
@@ -79,17 +79,17 @@ data <- data %>%
       tb
     }
   ) %>%
-  # mover_ano_mun = NA onde treat_B segue NA (como Stata)
+  # Set mover_ano_mun to missing wherever treat_B remains undefined
   mutate(
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
 # ---------------------------------------------------------
-# 2.1) NOVA relocation: Census Tract, t-1 (via code_tract)
-#      reloc_tract_tminus1(t) = lead( 1[ct(t) != ct(t-1)], 1 )
-#      + seu ajuste obrigatÃ³rio no 1Âº ano do id_estab
-#      + regra alinhada: se morte NA => relocation NA
+# 2.1) Construct the Census Tract relocation measure at t-1
+#      reloc_tract_tminus1(t) = lead(1[ct(t) != ct(t-1)], 1)
+#      Recode the first observed year from 1 to 0
+#      and align relocation with closure by setting relocation to NA when closure is NA
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -107,7 +107,7 @@ data <- data %>%
   ungroup() %>%
   select(-ct, -ct_lag, -diff_tract)
 
-# aplica corte por treat_B (igual teu padrÃ£o) + correÃ§Ã£o 1Âº ano + regra morte->NA
+# Apply the treatment-based sample restriction, first-year adjustment, and closure-based alignment
 data <- data %>%
   mutate(
     reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, as.numeric(reloc_tract_tminus1))
@@ -127,7 +127,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 2.2) Trend FE (ordem correta no fixest): treat_trend_f[code_tract_num]
+# 2.2) Trend fixed effect: treat_trend_f[code_tract_num]
 # ---------------------------------------------------------
 data <- data %>%
   mutate(
@@ -137,7 +137,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 2.3) Dummies anuais 2008â€“2012 + dummy agregada pÃ³s-choque
+# 2.3) Annual dummies for 2008-2012 plus the aggregated post-treatment indicator
 # ---------------------------------------------------------
 for (y in 2008:2012) {
   var <- paste0("treat_B_", y)
@@ -158,7 +158,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 3) EspecificaÃ§Ãµes de inferÃªncia
+# 3) Inference specifications
 # ---------------------------------------------------------
 outcomes <- c("morte", "reloc_tract_tminus1")
 
@@ -170,8 +170,8 @@ inference_specs <- list(
 )
 
 # ---------------------------------------------------------
-# 4) Rodar regressÃµes (Post + dummies anuais) para cada inferÃªncia
-#    FE: id_estab + year + treat_trend_f[code_tract_num]
+# 4) Estimate the post-treatment and annual models under each inference procedure
+#    Fixed effects: id_estab + year + treat_trend_f[code_tract_num]
 # ---------------------------------------------------------
 all_results <- data.frame()
 
@@ -181,7 +181,7 @@ for (inf_name in names(inference_specs)) {
   
   for (outcome in outcomes) {
     
-    # ---------- (a) Efeito agregado: Post ----------
+    # ---------- (a) Aggregated post-treatment effect ----------
     fml_agg <- as.formula(
       paste0(outcome,
              " ~ treat_B_agg | id_estab + year + treat_trend_f[code_tract_num]")
@@ -215,7 +215,7 @@ for (inf_name in names(inference_specs)) {
         CI_High     = estimate + 1.96 * std.error
       )
     
-    # ---------- (b) Dummies 2008â€“2012 ----------
+    # ---------- (b) Year-specific dummies for 2008-2012 ----------
     treat_vars <- paste0("treat_B_", 2008:2012)
     fml_evt <- as.formula(
       paste0(outcome, " ~ ",
@@ -257,7 +257,7 @@ for (inf_name in names(inference_specs)) {
 }
 
 # ---------------------------------------------------------
-# 5) Preparar dados e painÃ©is A/B
+# 5) Prepare the plotting data for Panels A and B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(
@@ -315,7 +315,7 @@ pB <- make_panel(
 )
 
 # ---------------------------------------------------------
-# 6) Figura final com legenda Ãºnica embaixo
+# 6) Build the final figure with a single legend at the bottom
 # ---------------------------------------------------------
 fig_inf <- ggpubr::ggarrange(
   pA, pB,
@@ -325,7 +325,7 @@ fig_inf <- ggpubr::ggarrange(
 )
 
 # ---------------------------------------------------------
-# 7) Salvar figura
+# 7) Save the figure
 # ---------------------------------------------------------
 ggsave(
   filename = "./results/analysis/change_standard_deviation.png",

@@ -1,7 +1,7 @@
 # ============================================================================
 # Figure B.2: Alternative Sizes of the Treatment Radius in Establishment-Level Estimates
-#   AJUSTE: Relocation = reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
-#   IMPORTANTE: reloc_tract_tminus1 Ã© construÃ­do ANTES do corte 2003â€“2012
+#   Relocation is defined as reloc_tract_tminus1 (Census Tract, t-1 via code_tract)
+#   reloc_tract_tminus1 is constructed before restricting the sample to 2003-2012
 # ============================================================================
 
 rm(list = ls())
@@ -17,7 +17,7 @@ library(ggpubr)
 library(broom)
 
 # ---------------------------------------------------------
-# Helper: code_tract precisa ser numÃ©rico p/ varying slopes (fixest)
+# Helper: code_tract must be numeric for varying slopes in fixest
 # ---------------------------------------------------------
 make_tract_num <- function(x) {
   x_chr <- as.character(x)
@@ -26,7 +26,7 @@ make_tract_num <- function(x) {
   x_num <- suppressWarnings(as.numeric(x_chr))
   bad   <- !is.na(x_chr) & is.na(x_num)
   
-  # se muita coisa nÃ£o parseia, usa codificaÃ§Ã£o por fator (mantÃ©m todos)
+  # Fall back to factor encoding when too many values fail numeric parsing
   if (sum(!is.na(x_chr)) > 0 && mean(bad) > 0.2) {
     x_num <- as.numeric(factor(x_chr))
   }
@@ -34,7 +34,7 @@ make_tract_num <- function(x) {
 }
 
 # ---------------------------------------------------------
-# 1) Carregar base (SEM cortar ainda)
+# 1) Load data without restricting the sample yet
 # ---------------------------------------------------------
 data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta")) %>%
   arrange(id_estab, year)
@@ -42,9 +42,9 @@ data <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dt
 stopifnot(all(c("id_estab","year","dist_flood","morte","mover_ano_mun","code_tract") %in% names(data)))
 
 # ---------------------------------------------------------
-# 1.1) Construir relocation correto ANTES do corte:
-#      reloc_tract_tminus1(t) = 1 se muda entre t e t+1 (via code_tract)
-#      + regra: no primeiro ano do estabelecimento, se der 1 -> vira 0
+# 1.1) Construct reloc_tract_tminus1 before restricting the sample:
+#      reloc_tract_tminus1(t) = 1 if the establishment moves between t and t+1
+#      and the first observed year is recoded from 1 to 0
 # ---------------------------------------------------------
 data <- data %>%
   group_by(id_estab) %>%
@@ -59,7 +59,7 @@ data <- data %>%
       TRUE                      ~ 0
     ),
     
-    reloc_tract_tminus1 = lead(diff_tract, 1)  # NA no Ãºltimo ano do estab
+    reloc_tract_tminus1 = lead(diff_tract, 1)  # Remains NA in the last observed year for each establishment
   ) %>%
   ungroup() %>%
   select(-ct, -ct_lag, -diff_tract) %>%
@@ -75,14 +75,14 @@ data <- data %>%
          reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1))
 
 # ---------------------------------------------------------
-# 2) AGORA sim: manter somente 2003â€“2012
+# 2) Restrict the sample to 2003-2012
 # ---------------------------------------------------------
 data <- data %>%
   filter(year >= 2003 & year <= 2012) %>%
   arrange(id_estab, year)
 
 # ---------------------------------------------------------
-# 3) ConstruÃ§Ã£o de tratamento principal (igual Tabela 3 / Fig. 5)
+# 3) Build the main treatment variables
 # ---------------------------------------------------------
 has_new_firm <- "new_firm" %in% names(data)
 
@@ -90,28 +90,28 @@ data <- data %>%
   arrange(id_estab, year) %>%
   group_by(id_estab) %>%
   mutate(
-    # tratamento principal (0â€“12.5 km vs 50â€“80 km)
+    # Main treatment definition: 0-12.5 km vs 50-80 km
     treat_B = case_when(
       dist_flood <= 12.5 ~ 1,
       dist_flood >= 50 & dist_flood <= 80 ~ 0,
       TRUE ~ NA_real_
     ),
-    # guardar originais
+    # Preserve original variables for reference
     morte_orig              = morte,
     mover_ano_mun_orig      = mover_ano_mun,
     reloc_tract_tminus1_orig = reloc_tract_tminus1,
     new_firm_orig           = if (has_new_firm) new_firm else NA_real_
   ) %>%
-  # outcomes = NA onde treat_B Ã© missing (como no Stata)
+  # Set outcomes to missing outside the analysis bands
   mutate(
     morte    = if_else(is.na(treat_B), NA_real_, morte),
     new_firm = if (has_new_firm) if_else(is.na(treat_B), NA_real_, new_firm) else NA_real_
   ) %>%
-  # forward fill de treat_B usando relocaÃ§Ã£o municipal ORIGINAL (como no Stata)
+  # Carry treatment status forward using the original municipal relocation measure
   mutate(
     treat_B = {
       tb  <- treat_B
-      mov <- mover_ano_mun  # aqui ainda Ã© o "bruto"
+      mov <- mover_ano_mun  # Use the original municipal relocation indicator here
       for (i in seq_along(tb)) {
         if (i > 1 && is.na(tb[i]) && !is.na(mov[i]) && mov[i] == 1) {
           tb[i] <- tb[i - 1]
@@ -120,18 +120,18 @@ data <- data %>%
       tb
     }
   ) %>%
-  # relocation (tract t-1) vira NA onde treat_B continua NA
+  # Set Census Tract relocation to missing wherever treat_B remains undefined
   mutate(
     reloc_tract_tminus1 = if_else(is.na(treat_B), NA_real_, reloc_tract_tminus1),
-    # sua regra (amostra alinhada): se closure Ã© NA, relocation tambÃ©m vira NA
+    # Align relocation with closure by setting relocation to NA when closure is NA
     reloc_tract_tminus1 = if_else(is.na(reloc_tract_tminus1),0,reloc_tract_tminus1),
     reloc_tract_tminus1 = if_else(is.na(morte), NA_real_, reloc_tract_tminus1),
-    # (mantÃ©m igual ao teu padrÃ£o)
+    # Keep mover_ano_mun aligned with the final treatment definition
     mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun)
   ) %>%
   ungroup()
 
-# tendÃªncia pÃ³s-choque para o slope por tract
+# Post-shock trend indicator for tract-specific varying slopes
 data <- data %>%
   mutate(
     treat_trend    = if_else(year >= 2008, 1, 0),
@@ -139,7 +139,7 @@ data <- data %>%
   )
 
 # ---------------------------------------------------------
-# 4) EspecificaÃ§Ãµes de raios de tratamento
+# 4) Alternative treatment-radius specifications
 # ---------------------------------------------------------
 radius_specs <- list(
   "0-2.5 km"  = 2.5,
@@ -148,13 +148,13 @@ radius_specs <- list(
   "0-22.5 km" = 22.5
 )
 
-# SÃ³ dois outcomes: fechamento e relocation (TRACT t-1)
+# Two outcomes are estimated: closure and Census Tract relocation at t-1
 outcomes <- c("morte", "reloc_tract_tminus1")
 
 all_results <- data.frame()
 
 # ---------------------------------------------------------
-# 5) Loop sobre raios e outcomes â€“ Post + dummies 2008â€“2012
+# 5) Loop over treatment radii and outcomes for the post-treatment and annual specifications
 # ---------------------------------------------------------
 for (rad_lab in names(radius_specs)) {
   
@@ -162,24 +162,24 @@ for (rad_lab in names(radius_specs)) {
   
   temp_data <- data %>%
     mutate(
-      # tratamento alternativo: 0â€“radius vs 50â€“80 km
+      # Alternative treatment definition: 0-radius vs 50-80 km
       treat_B_temp = case_when(
         dist_flood <= radius ~ 1,
         dist_flood >= 50 & dist_flood <= 80 ~ 0,
         TRUE ~ NA_real_
       ),
-      # sempre partir dos originais
+      # Always restart from the original variables
       morte_temp               = morte_orig,
-      mover_ano_mun_temp       = mover_ano_mun_orig,         # sÃ³ p/ forward fill do treat
+      mover_ano_mun_temp       = mover_ano_mun_orig,         # Used only to carry treatment forward
       reloc_tract_tminus1_temp = reloc_tract_tminus1_orig
     ) %>%
     group_by(id_estab) %>%
     mutate(
-      # 1) outcomes = NA onde treat_B_temp Ã© NA
+      # 1) Set outcomes to missing where treat_B_temp is undefined
       morte_temp               = if_else(is.na(treat_B_temp), NA_real_, morte_temp),
       reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_tract_tminus1_temp),
       
-      # 2) forward fill de treat_B_temp usando mover_ano_mun_temp ORIGINAL
+      # 2) Carry treat_B_temp forward using the original municipal relocation measure
       treat_B_temp = {
         tb  <- treat_B_temp
         mov <- mover_ano_mun_temp
@@ -191,15 +191,15 @@ for (rad_lab in names(radius_specs)) {
         tb
       },
       
-      # 3) sÃ³ AGORA: relocation vira NA onde treat_B_temp continua NA
+      # 3) Reapply missing values to relocation wherever treat_B_temp remains undefined
       reloc_tract_tminus1_temp = if_else(is.na(treat_B_temp), NA_real_, reloc_tract_tminus1_temp),
       
-      # (alinhamento: se closure Ã© NA, relocation tambÃ©m NA)
+      #    and align relocation with closure when closure is NA
       reloc_tract_tminus1_temp = if_else(is.na(morte_temp), NA_real_, reloc_tract_tminus1_temp)
     ) %>%
     ungroup()
   
-  # dummies 2008â€“2012 e dummy agregada (Post)
+  # Annual dummies for 2008-2012 and the aggregated post-treatment indicator
   for (y in 2008:2012) {
     var <- paste0("treat_B_temp_", y)
     temp_data[[var]] <- dplyr::case_when(
@@ -218,12 +218,12 @@ for (rad_lab in names(radius_specs)) {
       )
     )
   
-  # regressÃµes por outcome
+  # Estimate the regressions by outcome
   for (outcome in outcomes) {
     
     yvar <- paste0(outcome, "_temp")
     
-    # (1) modelo agregado (Post)
+    # (1) Aggregated post-treatment model
     fml_agg <- as.formula(
       paste0(yvar, " ~ treat_B_agg_temp | id_estab + year + treat_trend[code_tract_num]")
     )
@@ -245,7 +245,7 @@ for (rad_lab in names(radius_specs)) {
         CI_High          = estimate + 1.96 * std.error
       )
     
-    # (2) modelo com dummies 2008â€“2012
+    # (2) Model with year-specific dummies for 2008-2012
     treat_vars <- paste0("treat_B_temp_", 2008:2012)
     fml_evt <- as.formula(
       paste0(yvar, " ~ ", paste(treat_vars, collapse = " + "),
@@ -275,7 +275,7 @@ for (rad_lab in names(radius_specs)) {
 }
 
 # ---------------------------------------------------------
-# 6) Preparar dados, paleta e painÃ©is A/B
+# 6) Prepare the plotting data, palette, and Panels A/B
 # ---------------------------------------------------------
 all_results <- all_results %>%
   mutate(
@@ -326,7 +326,7 @@ pB <- make_panel(
 )
 
 # ---------------------------------------------------------
-# 7) Figura final + salvar
+# 7) Build and save the final figure
 # ---------------------------------------------------------
 fig_rad <- ggpubr::ggarrange(
   pA, pB,

@@ -4,21 +4,21 @@
   \label{tab6: hazard_closure}
   \scalebox{0.75}{
  \begin{threeparttable}
-    \begin{tabular}{lcc}
+    \begin{tabular}{lcccc}
     \toprule
-          & (1) & (2) \\
+          & \multicolumn{2}{c}{(1)} & \multicolumn{2}{c}{(2)} \\
+          & Coefficient & Hazard Ratio & Coefficient & Hazard Ratio \\
     \midrule
-    Flash Flood Post & 0.06097*** & 0.05899*** \\
-                      & (0.01360) & (0.01325) \\
-    Hazard Ratio & 1.06287 & 1.06076 \\
-    Observations & 367{,}759 & 367{,}759 \\
-    Number of Units & 79{,}635 & 79{,}635 \\
-    Number of Failures & 39{,}340 & 39{,}340 \\
-    Establishment Controls & No & Yes \\
+    Flash Flood Post & 0.06067*** & 1.06255*** & 0.05868*** & 1.06044*** \\
+                      & (0.01360) &  & (0.01324) &  \\
+    Observations & 367{,}402 & 367{,}402 & 367{,}402 & 367{,}402 \\
+    Number of Units & 79{,}604 & 79{,}604 & 79{,}604 & 79{,}604 \\
+    Number of Failures & 39{,}340 & 39{,}340 & 39{,}340 & 39{,}340 \\
+    Establishment Controls & No & No & Yes & Yes \\
     \bottomrule
     \end{tabular}%
     \begin{tablenotes}[flushleft]
-    \item \small Notes: Estimates of equation (3) using the hazard of establishment closure as the dependent variable. The Cox specification uses establishment age as the duration clock. Column (2) adds establishment-level controls reported in the paper. Robust standard errors are reported in parentheses. Observations denote establishment-year observations, the number of units corresponds to unique establishments at risk, and the number of failures indicates establishments that experienced closure. All models include sector and year fixed effects. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \item \small Notes: Exact R translation of the legacy Stata specification used for Table 6. The survival setup follows \texttt{stset year, failure(morte) id(id\_estab)} and the Cox model follows \texttt{stcox} with sector-year strata and establishment-clustered standard errors. Column (2) adds the baseline controls generated in the Stata do-file from each establishment's first observed year: employment (\texttt{empregados2}), branch count (\texttt{afil2}), opening year (\texttt{yr\_abert2}), and workforce education shares (\texttt{educ\_d22}, \texttt{educ\_d32}, \texttt{educ\_d42}). Observations denote establishment-year observations used by each model, the number of units corresponds to unique establishments at risk, and the number of failures indicates establishments that experienced closure. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
     \end{tablenotes}
     \end{threeparttable}
     }

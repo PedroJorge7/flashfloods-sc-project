@@ -1,7 +1,7 @@
 # ============================================================================
-# Table 2 – Definition of Treatment Radius
+# Table 2 - Definition of Treatment Radius
 #           Effects of Flooding using Different Treatment Bands
-#           (replicando o Stata, com formatação LaTeX customizada)
+#           Custom LaTeX formatting for the paper-ready table
 # ============================================================================
 
 rm(list = ls())
@@ -14,7 +14,7 @@ library(fixest)
 library(broom)
 
 # ---------------------------------------------------------------------------
-# 1) Base crua + recorte 2003–2012
+# 1) Load the raw data and keep the 2003-2012 sample
 # ---------------------------------------------------------------------------
 
 dados_raw <- haven::read_dta(data_path("Natural Disastrer Santa Catarina - Dataset.dta"))
@@ -28,17 +28,17 @@ dados_raw <- dados_raw %>%
   )
 
 # ---------------------------------------------------------------------------
-# 2) Bandas de tratamento (como na tabela do paper)
+# 2) Treatment bands used in the paper
 # ---------------------------------------------------------------------------
 
 bands <- list(
-  "0–2.5 km"   = c(NA,   2.5),
-  "2.5–5 km"   = c(2.5,  5),
-  "5–7.5 km"   = c(5,    7.5),
-  "7.5–10 km"  = c(7.5, 10),
-  "10–12.5 km" = c(10,  12.5),
-  "12.5–15 km" = c(12.5,15),
-  "15–17.5 km" = c(15, 17.5)
+  "0-2.5 km"   = c(NA,   2.5),
+  "2.5-5 km"   = c(2.5,  5),
+  "5-7.5 km"   = c(5,    7.5),
+  "7.5-10 km"  = c(7.5, 10),
+  "10-12.5 km" = c(10,  12.5),
+  "12.5-15 km" = c(12.5,15),
+  "15-17.5 km" = c(15, 17.5)
 )
 
 treat_years <- 2008:2012
@@ -47,7 +47,7 @@ models   <- list()
 col_idx  <- 1L
 
 # ---------------------------------------------------------------------------
-# 3) Loop sobre bandas – constrói fechamento/tratamento igual Fig. 3
+# 3) Loop over treatment bands and build the analysis variables
 # ---------------------------------------------------------------------------
 
 for (b_name in names(bands)) {
@@ -59,7 +59,7 @@ for (b_name in names(bands)) {
     arrange(id_estab, year) %>%
     group_by(id_estab) %>%
     mutate(
-      # definição da banda de tratamento vs controle 50–80 km
+      # Treatment band against the 50-80 km control ring
       treat_B_temp = case_when(
         is.na(lower_b) & dist_flood <= upper_b ~ 1,
         !is.na(lower_b) & dist_flood > lower_b & dist_flood <= upper_b ~ 1,
@@ -69,11 +69,11 @@ for (b_name in names(bands)) {
       morte_temp         = morte_orig,
       mover_ano_mun_temp = mover_ano_mun_orig
     ) %>%
-    # fechamento = NA fora de tratamento/controle
+    # Set closure to missing outside the treatment and control bands
     mutate(
       morte_temp = if_else(is.na(treat_B_temp), NA_real_, morte_temp)
     ) %>%
-    # forward fill de treat_B_temp usando mover_ano_mun ORIGINAL
+    # Carry treat_B_temp forward using the original municipal relocation measure
     mutate(
       treat_B_temp = {
         tb  <- treat_B_temp
@@ -86,13 +86,13 @@ for (b_name in names(bands)) {
         tb
       }
     ) %>%
-    # relocação = NA onde treat_B_temp continua NA
+    # Set relocation to missing wherever treat_B_temp remains undefined
     mutate(
       mover_ano_mun_temp = if_else(is.na(treat_B_temp), NA_real_, mover_ano_mun_temp)
     ) %>%
     ungroup()
   
-  # dummies ano-específicas de tratamento (2003–2012)
+  # Year-specific treatment dummies (2003-2012)
   for (y in 2003:2012) {
     var <- paste0("treat_B_temp_", y)
     temp[[var]] <- dplyr::case_when(
@@ -102,7 +102,7 @@ for (b_name in names(bands)) {
     )
   }
   
-  # regressão: Flash Flood 2008–2012, FE id_estab + year
+  # Regression for Flash Flood 2008-2012 with establishment and year fixed effects
   rhs <- paste0("treat_B_temp_", treat_years, collapse = " + ")
   fml <- as.formula(
     paste0("morte_temp ~ ", rhs, " | id_estab + year")
@@ -110,16 +110,17 @@ for (b_name in names(bands)) {
   
   models[[col_idx]] <- feols(
     fml,
-    data    = temp,
-    cluster = ~ id_estab,
-    lean    = TRUE
+    data     = temp,
+    cluster  = ~ id_estab + year,
+    fixef.rm = "none",
+    lean     = TRUE
   )
   names(models)[col_idx] <- paste0("(", col_idx, ")")
   col_idx <- col_idx + 1L
 }
 
 # ---------------------------------------------------------------------------
-# 4) Extrair coeficientes / SE e montar matriz coef_mat
+# 4) Extract coefficients and standard errors
 # ---------------------------------------------------------------------------
 
 star_fun <- function(p) {
@@ -155,10 +156,10 @@ for (j in seq_along(models)) {
 }
 
 # ============================================================================
-# 5) Montar LaTeX no formato da tabela do paper
+# 5) Build LaTeX in the paper table format
 # ============================================================================
 
-# função para intercalar valores com colunas vazias
+# Helper to interleave values with blank spacer columns
 make_row <- function(label, vals) {
   inter <- as.vector(rbind(vals, rep("", length(vals))))
   paste0(label, " & ", paste(inter, collapse = " & "), " \\\\")
@@ -167,7 +168,7 @@ make_row <- function(label, vals) {
 bands_labels <- names(bands)              # Treatment group labels
 col_ids      <- paste0("(", 1:length(models), ")")
 
-# cabeçalho – linha dos números das colunas
+# Header row with column numbers
 header_cols <- paste(
   as.vector(rbind(col_ids, rep("", length(col_ids)))),
   collapse = " & "
@@ -182,10 +183,10 @@ dep_row     <- make_row("  Dep. Var:", dep_vals)
 treat_row   <- make_row("Treatment Group", bands_labels)
 
 # Control group row
-ctrl_vals   <- rep("50–80 km", length(models))
+ctrl_vals   <- rep("50-80 km", length(models))
 ctrl_row    <- make_row("Control Group", ctrl_vals)
 
-# linhas de coeficientes/EP por ano
+# Coefficient and standard error rows by year
 flash_rows <- c()
 for (i in seq_along(treat_years)) {
   coef_vals <- coef_mat[2*i - 1, ]
@@ -197,7 +198,7 @@ for (i in seq_along(treat_years)) {
   )
 }
 
-# Observações e linhas fixas
+# Observation counts and fixed footer rows
 obs_vals <- format(obs_vec, big.mark = ",", scientific = FALSE)
 obs_row  <- make_row("Observations", obs_vals)
 
@@ -209,7 +210,7 @@ year_fe_row <- make_row("Year FE", yes_vals)
 trend_row   <- make_row("Census trend", no_vals)
 
 # ---------------------------------------------------------------------------
-# 6) Juntar tudo em um vetor de linhas LaTeX
+# 6) Assemble the LaTeX lines
 # ---------------------------------------------------------------------------
 
 tex_lines <- c(
