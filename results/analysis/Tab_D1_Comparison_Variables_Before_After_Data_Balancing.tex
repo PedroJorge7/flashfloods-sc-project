@@ -1,0 +1,39 @@
+\begin{table}[htb]
+  \centering
+  \tabcaption{Comparison of Variables Before and After Data Balancing}
+  \label{tab:comparison_variables_before_after_balancing}
+  \scalebox{0.80}{
+  \begin{threeparttable}
+    \begin{tabular}{l c c c c c c}
+    \toprule
+      & \multicolumn{3}{c}{Unmatched Data} & \multicolumn{3}{c}{Matched Data} \\
+      \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+      & Treated & Control & Difference & Treated & Control & Difference \\
+    \midrule
+    \multicolumn{7}{l}{\textbf{General Characteristics}}\\
+    Establishment Size & 3.92 & 5.42 & -1.5*** & 3.92 & 3.91 & 0.01 \\
+    Average Working Hours & 50.76 & 68.05 & -17.29*** & 32.58 & 33.81 & -1.23*** \\
+    Wage Value & 1227.36 & 1359.16 & -131.8*** & 1045.84 & 1065.91 & -20.07* \\
+    Age & 35 & 35.46 & -0.46** & 32.81 & 33.04 & -0.23** \\
+    Gender Dummy (Male) & 0.61 & 0.64 & -0.03*** & 0.55 & 0.55 & 0 \\
+    \\
+    \multicolumn{7}{l}{\textbf{Worker's Education}}\\
+    Incomplete Primary Education & 0.08 & 0.08 & 0 & 0.07 & 0.07 & 0 \\
+    Complete Primary Education & 0.31 & 0.29 & 0.02* & 0.32 & 0.32 & 0 \\
+    Complete High School & 0.39 & 0.47 & -0.08*** & 0.46 & 0.46 & 0 \\
+    Higher Education & 0.22 & 0.16 & 0.06*** & 0.15 & 0.15 & 0 \\
+    \\
+    \multicolumn{7}{l}{\textbf{Employment Sector}}\\
+    Retail and Wholesale & 0.23 & 0.2 & 0.03*** & 0.29 & 0.29 & 0 \\
+    Construction & 0.02 & 0.04 & -0.02*** & 0.03 & 0.03 & 0 \\
+    Manufacturing & 0.26 & 0.31 & -0.05*** & 0.35 & 0.35 & 0 \\
+    Other Sectors & 0.06 & 0.12 & -0.06*** & 0.09 & 0.09 & 0 \\
+    Transport & 0.06 & 0.07 & -0.01** & 0.06 & 0.06 & 0 \\
+    \bottomrule
+    \end{tabular}
+    \begin{tablenotes}[flushleft]
+    \item \small This table compares worker characteristics before and after the balancing step used in the paper's worker-side analysis. The published values are read from the legacy artifact \texttt{results\_psm.csv}, which was produced by the original PSM workflow. *** p$<$0.01, ** p$<$0.05, * p$<$0.1.
+    \end{tablenotes}
+  \end{threeparttable}
+  }
+\end{table}

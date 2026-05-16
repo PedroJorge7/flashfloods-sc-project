@@ -60,10 +60,10 @@ scripts_by_section <- list(
     "Figure B.2" = "./results/code/Figure B.2 Alternative Sizes of the Treatment Radius in Establishment-Level Estimates..R",
     "Figure B.3" = "./results/code/Figure B.3 Establishment Level Estimates Using Alternative Inference Procedures.R",
     "Figure B.4" = "./results/code/Figure B.4 Falsification Test for the Control Area in Establishment-Level Estimates.R",
-    "Table B.1" = "./results/code/Table B.2 Establishment-Level Estimates Including Control Variables.R",
-    "Table B.2" = "./results/code/Table B.3 Establishment-Level Estimates Increasing the Post-Treatment Period.R",
-    "Table B.3" = "./results/code/Table F.2 Worker Level Estimates Dropping Units that Moved Across Areas.R",
-    "Table B.4" = "./results/code/Table B.6 Establishment-Level Estimates Dropping Units Affected by the 2011 Floods.R"
+    "Table B.1" = "./results/code/Table B.1 Establishment-Level Estimates Including Control Variables.R",
+    "Table B.2" = "./results/code/Table B.2 Establishment-Level Estimates Increasing the Post-Treatment Period.R",
+    "Table B.3" = "./results/code/Table B.3 Establishment-Level Estimates Dropping Units that Moved Across Areas.R",
+    "Table B.4" = "./results/code/Table B.4 Establishment-Level Estimates Dropping Units Affected by the 2011 Floods.R"
   ),
   
   # 6. Appendix D
@@ -81,7 +81,7 @@ scripts_by_section <- list(
     "Figure F.1" = "./results/code/Figure F.1 Alternative Sizes of the Control Rings in Worker-Level Estimations.R",
     "Figure F.2" = "./results/code/Figure F.2 Alternative Sizes of the Treatment Radius in Worker-Level Estimations.R",
     "Table F.1" = "./results/code/Table F.1 Worker Level Estimates Increasing Post-Treatment Period.R",
-    "Table F.2" = "./results/code/Table F.3 Worker Level Estimates Dropping Units that Moved Across Areas.R"
+    "Table F.2" = "./results/code/Table F.2 Worker Level Estimates Dropping Units that Moved Across Areas.R"
   ),
   
   # 9. Appendix G
