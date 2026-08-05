@@ -14,7 +14,8 @@ run_start_time <- Sys.time()
 resolve_project_root <- function() {
   ofile <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
   if (!is.null(ofile) && nzchar(ofile)) {
-    return(normalizePath(dirname(ofile), winslash = "/", mustWork = TRUE))
+    return(normalizePath(file.path(dirname(ofile), "..", ".."),
+                         winslash = "/", mustWork = TRUE))
   }
   normalizePath(getwd(), winslash = "/", mustWork = TRUE)
 }

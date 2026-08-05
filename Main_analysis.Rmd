@@ -1,0 +1,151 @@
+---
+title: "Flash Floods, Business Adjustment, and Ripple Effects on Displaced Workers"
+subtitle: "Replication Package"
+author:
+  - "Pedro Jorge Alves"
+  - "Philipp Ehrl"
+  - "Ricardo C. A. Lima"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: show
+params:
+  run_main: false
+  run_appendix: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = TRUE,
+  warning = TRUE,
+  error = FALSE
+)
+
+project_root <- normalizePath(
+  dirname(knitr::current_input(dir = TRUE)),
+  winslash = "/",
+  mustWork = TRUE
+)
+knitr::opts_knit$set(root.dir = project_root)
+```
+
+# Overview
+
+This is the main executable document for the replication package of
+*Flash Floods, Business Adjustment, and Ripple Effects on Displaced Workers*.
+It provides a single entry point for reproducing the results while keeping
+the exhibit-specific scripts organized under `results/code`.
+
+The establishment-level treatment group contains firms located within 5 km
+of the mapped flood spots. The baseline control group contains firms located
+between 50 and 80 km from those spots.
+
+# Directory structure
+
+```text
+flashfloods-sc-project/
+├── Main_analysis.Rmd
+├── README.md
+├── data/
+└── results/
+    ├── code/
+    │   ├── Main Estimates/
+    │   ├── Appendix/
+    │   └── utils/
+    ├── analysis/
+    ├── cache/
+    └── logs/
+```
+
+- `data` stores the required input databases.
+- `results/code` stores the main, appendix, and shared R scripts.
+- `results/analysis` receives the final figures and tables.
+- `results/cache` receives intermediate estimation panels.
+- `results/logs` receives execution logs.
+
+# Reproduction controls
+
+The document does not run the estimations when knitted with the default
+parameters. This prevents an accidental full replication, which can be
+computationally intensive.
+
+To reproduce the main results, render with:
+
+```r
+rmarkdown::render(
+  "Main_analysis.Rmd",
+  params = list(run_main = TRUE, run_appendix = FALSE)
+)
+```
+
+To reproduce everything, use:
+
+```r
+rmarkdown::render(
+  "Main_analysis.Rmd",
+  params = list(run_main = TRUE, run_appendix = TRUE)
+)
+```
+
+# Main results
+
+The main runner executes the exhibits in the order in which they appear in
+the paper and saves their outputs in `results/analysis`.
+
+```{r run-main-results}
+if (isTRUE(params$run_main)) {
+  source(file.path(project_root, "results", "code", "run_main_estimates.R"))
+} else {
+  message("Main estimations skipped. Set params$run_main = TRUE to run them.")
+}
+```
+
+# Appendix results
+
+The appendix runner executes the municipal balance analysis, distance-band
+analysis, establishment robustness exercises, worker results, and HonestDiD
+sensitivity analysis.
+
+```{r run-appendix-results}
+if (isTRUE(params$run_appendix)) {
+  source(file.path(project_root, "results", "code", "run_appendix.R"))
+} else {
+  message("Appendix estimations skipped. Set params$run_appendix = TRUE to run them.")
+}
+```
+
+# Code and corresponding results
+
+## Main text
+
+| Exhibit | Script | Output |
+|:--|:--|:--|
+| Figure 1 — Geographical Distribution | `Main Estimates/01_figure1_geographical_distribution_affected_area.R` | `map_new.png` |
+| Table 1 — Summary Statistics | `Main Estimates/01_table1_summary_statistics.R` | `Tab_01_Summary_Statistics_5km_tract.tex` |
+| Figure 2 — Aggregate Outcomes | `Main Estimates/02_figure2_evolution_aggregate_outcomes.R` | `graph_descritivo.png` |
+| Table 2 — Establishment Adjustment | `Main Estimates/03_table2_establishment_adjustment.R` | `Tab_02_Establishment_Adjustment_5km_tract.tex` |
+| Figure 4 — Establishment Event Study | `Main Estimates/04_figure4_event_study_establishments.R` | `event_study.png` |
+| Tables 3–5 | `Main Estimates/05_...R` through `07_...R` | `Tab_03_...tex` through `Tab_05_...tex` |
+| Table 6 — Dismissed Workers | `Main Estimates/08_table6_dismissed_workers.R` | `Tab_06_Dismissed_Workers_5km_tract.tex` |
+| Figure 5 — Worker Event Study | `Main Estimates/09_figure5_event_study_workers.R` | `event_study_empregados.png` |
+
+## Appendix
+
+| Section | Code folder | Principal outputs |
+|:--|:--|:--|
+| A | `Appendix/A_Municipal_Balance` | Municipal balance table |
+| B | `Appendix/B_Distance_Band_Analysis` | Distance-band table |
+| C | `Appendix/C_Establishment_Robustness` | Establishment robustness tables and figures |
+| E | `Appendix/E_Workers_Balancing` | Worker balance table |
+| F | `Appendix/F_Exposed_Workers` | Exposed-worker estimates |
+| G | `Appendix/G_Worker_Robustness` | Worker robustness figures |
+| H | `Appendix/H_Robust_Confidence_Intervals` | HonestDiD sensitivity figures |
+
+# Session information
+
+```{r session-information}
+sessionInfo()
+```
