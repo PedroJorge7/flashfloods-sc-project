@@ -14,6 +14,7 @@ and establishments between 50 and 80 km form the baseline control group.
 
 ```text
 flashfloods-sc-project/
+├── Main_analysis.Rmd
 ├── README.md
 ├── data/
 └── results/
@@ -46,8 +47,12 @@ The establishment and worker microdata may be subject to access restrictions.
 
 ## Replication
 
-Open `flashfloods-sc-project.Rproj`, set the project root as the working
-directory, and run:
+Open `Main_analysis.Rmd` in the project root for the documented executable
+replication file. Its parameters allow the main results and appendix to be
+run separately.
+
+Alternatively, open `flashfloods-sc-project.Rproj`, set the project root as
+the working directory, and run:
 
 ```r
 source("results/code/run_main_estimates.R")
