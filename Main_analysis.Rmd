@@ -127,7 +127,7 @@ if (isTRUE(params$run_appendix)) {
 
 ## Main text
 
-| Exhibit | Script | Output |
+| Exhibit | Script | |
 |:--|:--|:--|
 | Figure 1 — Geographical Distribution | `Main Estimates/01_figure1_geographical_distribution_affected_area.R` | `map_new.png` |
 | Table 1 — Summary Statistics | `Main Estimates/01_table1_summary_statistics.R` | `Tab_01_Summary_Statistics_5km_tract.tex` |
@@ -140,7 +140,7 @@ if (isTRUE(params$run_appendix)) {
 
 ## Appendix
 
-| Section | Code folder | Principal outputs |
+| Section | Code folder | |
 |:--|:--|:--|
 | A | `Appendix/A_Municipal_Balance` | Municipal balance table |
 | B | `Appendix/B_Distance_Band_Analysis` | Distance-band table |

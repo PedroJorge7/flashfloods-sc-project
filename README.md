@@ -69,7 +69,7 @@ Both runners save final exhibits directly in `results/analysis`.
 
 ## Main Results
 
-| Exhibit | Code | Output |
+| Exhibit | Code | |
 |---|---|---|
 | Figure 1 — Geographical Distribution of the Affected Area | `Main Estimates/01_figure1_geographical_distribution_affected_area.R` | `map_new.png` |
 | Table 1 — Summary Statistics for the Pre-Disaster Year 2007 | `Main Estimates/01_table1_summary_statistics.R` | `Tab_01_Summary_Statistics_5km_tract.tex` |
@@ -88,7 +88,7 @@ by the LaTeX source. Figure 3 and the auxiliary calamity maps are stored in
 
 ## Appendix Results
 
-| Exhibit | Script folder | Output title |
+| Exhibit | Script folder | |
 |---|---|---|
 | Table A.1 — Municipal Balance | `Appendix/A_Municipal_Balance` | `Tab_A01_Municipal_Balance_5km_Nucleo.tex` |
 | Table B.1 — Distance Bands | `Appendix/B_Distance_Band_Analysis` | `Tab_B01_Distance_Band_Analysis_5km_tract.tex` |
