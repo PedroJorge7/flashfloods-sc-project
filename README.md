@@ -85,12 +85,14 @@ by the LaTeX source. Figure 3 and the auxiliary calamity maps are stored in
 |---|---|
 | Table A.1 — Municipal Balance | `Appendix/A_Municipal_Balance` |
 | Table B.1 — Distance Bands | `Appendix/B_Distance_Band_Analysis` |
+| Table B.3 — Dropping Establishments that Moved Across Areas | `Appendix/B_Distance_Band_Analysis` |
 | Figure C.1 — Alternative Control Rings | `Appendix/C_Establishment_Robustness` |
 | Figure C.2 — Alternative Treatment Radius | `Appendix/C_Establishment_Robustness` |
-| Tables C.3–C.8 — Establishment Robustness | `Appendix/C_Establishment_Robustness` |
+| Tables C.3–C.5 and C.7–C.8 — Establishment Robustness | `Appendix/C_Establishment_Robustness` |
 | Figure C.9 — Falsification Test | `Appendix/C_Establishment_Robustness` |
 | Table E.1 — Worker Balancing | `Appendix/E_Workers_Balancing` |
 | Table F.1 — Exposed Workers | `Appendix/F_Exposed_Workers` |
+| Table F.3 — Dropping Workers that Moved Across Areas | `Appendix/F_Exposed_Workers` |
 | Figures G.1–G.4 — Worker Robustness | `Appendix/G_Worker_Robustness` |
 | Figure H.1 — HonestDiD | `Appendix/H_Robust_Confidence_Intervals` |
 
