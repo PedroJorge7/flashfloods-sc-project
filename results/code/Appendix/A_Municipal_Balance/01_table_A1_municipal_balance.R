@@ -8,47 +8,25 @@
 # share of establishments in each sector, computed from RAIS 2002 using the
 # same subs_ibge classification as Table 1. Municipality 4208302 (core to
 # both treatment and control) is excluded from the two-sample test.
-# Reads the pre-built data/municipal_balance_5km_nucleo.rds (see
-# "balance exercice/" for how that file's variables were originally sourced
-# and merged from external geographic/climatic/socioeconomic data).
+# Reads the pre-built data/municipal_balance_5km_nucleo.rds. The file already
+# includes 2002 municipal BNDES disbursements per capita, so the replication
+# package needs only one municipal-balance input file.
 # ============================================================================
 
 log_msg("=== 01_table_A1_municipal_balance.R: start ===")
 
 base_muni <- readRDS(data_path("municipal_balance_5km_nucleo.rds"))
 
-# Of the three credit files available in data/, BNDES disbursements provide
-# the cleanest municipal-level pre-disaster measure: they are already
-# aggregated by municipality/year, cover every municipality in this sample,
-# and are reasonably balanced between the two rings.  We use the 2002-2007
-# annual average so that a single unusually large operation does not drive
-# the comparison. Values are expressed in constant BRL millions.
-if (!requireNamespace("arrow", quietly = TRUE)) {
-  stop("Package 'arrow' is required to read bndes_desembolsos_gold.parquet.")
-}
-bndes_pre <- arrow::read_parquet(
-  data_path("bndes_desembolsos_gold.parquet"),
-  col_select = c("cod_municipio", "ano", "desembolsos_reais_total")
-) %>%
-  dplyr::mutate(
-    codigo_municipio = as.character(cod_municipio),
-    ano = as.integer(ano),
-    desembolsos_reais_total = as.numeric(desembolsos_reais_total)
-  ) %>%
-  dplyr::filter(ano >= 2002, ano <= 2007) %>%
-  dplyr::group_by(codigo_municipio) %>%
-  dplyr::summarise(
-    bndes_desembolsos_medios_2002_2007 =
-      mean(desembolsos_reais_total, na.rm = TRUE) / 1e6,
-    .groups = "drop"
+required_bndes_var <- "bndes_desembolsos_pc_2002"
+if (!(required_bndes_var %in% names(base_muni))) {
+  stop(
+    "The consolidated municipal balance file is missing variable: ",
+    required_bndes_var
   )
-
-base_muni <- base_muni %>%
-  dplyr::left_join(bndes_pre, by = "codigo_municipio")
-
-if (anyNA(base_muni$bndes_desembolsos_medios_2002_2007)) {
+}
+if (anyNA(base_muni[[required_bndes_var]])) {
   missing_codes <- base_muni$codigo_municipio[
-    is.na(base_muni$bndes_desembolsos_medios_2002_2007)
+    is.na(base_muni[[required_bndes_var]])
   ]
   stop(
     "BNDES disbursements are missing for municipal code(s): ",
@@ -84,8 +62,8 @@ econ_vars <- c(
   indice_gini_2000 = "Gini Index",
   idhm_2000 = "Human Development Index",
   prop_ocupados_formalizacao_2000 = "Labor Formalization Rate (\\%)",
-  bndes_desembolsos_medios_2002_2007 =
-    "Average Annual BNDES Disbursements, 2002--2007 (BRL million)"
+  bndes_desembolsos_pc_2002 =
+    "BNDES Disbursements per Capita, 2002 (BRL)"
 )
 infra_vars <- c(
   dist_sede_rodovia_km = "Distance to Nearest Major Road (km)",
@@ -144,7 +122,7 @@ lines <- c(
   sprintf("    N. Municipalities & %s & & %s & & \\\\", n_treated, n_control),
   "    \\bottomrule", "    \\bottomrule", "    \\end{tabular}%",
   "    \\begin{tablenotes}[flushleft]",
-  "    \\item \\small \\textit{Notes:} This table compares pre-disaster characteristics of municipalities overlapping the treatment and control areas. Municipalities are assigned to each group according to whether their territories overlap the corresponding treatment or control area. BNDES disbursements are the municipality-level annual average over 2002--2007, expressed in constant BRL millions. The final column reports the difference in means between treated and control municipalities. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
+  "    \\item \\small \\textit{Notes:} This table compares pre-disaster characteristics of municipalities overlapping the treatment and control areas. Municipalities are assigned to each group according to whether their territories overlap the corresponding treatment or control area. BNDES disbursements are total municipal disbursements in 2002 divided by the municipality's 2002 population and are expressed in BRL per resident. The final column reports the difference in means between treated and control municipalities. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
   "    \\end{tablenotes}", "  \\end{threeparttable}", "  }", "\\end{table}%"
 )
 

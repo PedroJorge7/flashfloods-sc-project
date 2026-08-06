@@ -1,6 +1,7 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-data/
-data_mask/
+# Publish only documentation and R scripts.
+*
+!.gitignore
+!*/
+!*.md
+!*.Rmd
+!*.R

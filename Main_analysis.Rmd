@@ -43,6 +43,13 @@ The establishment-level treatment group contains firms located within 5 km
 of the mapped flood spots. The baseline control group contains firms located
 between 50 and 80 km from those spots.
 
+The flood-extent data were mapped from satellite radar imagery acquired after
+the 2008 disaster. The source layers combine flood classifications derived
+from TerraSAR-X, RADARSAT-2 (ascending and descending passes), and ENVISAT
+ASAR imagery into a single polygon layer. These radar data identify inundated
+areas despite cloud cover; distances from establishments to the mapped flood
+extent are then used to define the treatment and control rings.
+
 # Directory structure
 
 ```text
@@ -55,9 +62,7 @@ flashfloods-sc-project/
     │   ├── Main Estimates/
     │   ├── Appendix/
     │   └── utils/
-    ├── analysis/
-    ├── cache/
-    └── logs/
+    └── analysis/
 ```
 
 - `data` is the expected local location of the restricted input databases;
@@ -65,12 +70,10 @@ flashfloods-sc-project/
 - `results/code` contains the version-controlled main, appendix, and shared R
   scripts.
 - `results/analysis` receives locally generated figures and tables.
-- `results/cache` receives local intermediate estimation panels.
-- `results/logs` receives local execution logs.
 
 The directory tree records the expected replication workflow. The restricted
-inputs and generated outputs, caches, and logs do not need to be included in
-a code-only distribution.
+inputs and generated outputs do not need to be included in a code-only
+distribution.
 
 # Reproduction controls
 
@@ -127,28 +130,28 @@ if (isTRUE(params$run_appendix)) {
 
 ## Main text
 
-| Exhibit | Script | |
-|:--|:--|:--|
-| Figure 1 — Geographical Distribution | `Main Estimates/01_figure1_geographical_distribution_affected_area.R` | `map_new.png` |
-| Table 1 — Summary Statistics | `Main Estimates/01_table1_summary_statistics.R` | `Tab_01_Summary_Statistics_5km_tract.tex` |
-| Figure 2 — Aggregate Outcomes | `Main Estimates/02_figure2_evolution_aggregate_outcomes.R` | `graph_descritivo.png` |
-| Table 2 — Establishment Adjustment | `Main Estimates/03_table2_establishment_adjustment.R` | `Tab_02_Establishment_Adjustment_5km_tract.tex` |
-| Figure 4 — Establishment Event Study | `Main Estimates/04_figure4_event_study_establishments.R` | `event_study.png` |
-| Tables 3–5 | `Main Estimates/05_...R` through `07_...R` | `Tab_03_...tex` through `Tab_05_...tex` |
-| Table 6 — Dismissed Workers | `Main Estimates/08_table6_dismissed_workers.R` | `Tab_06_Dismissed_Workers_5km_tract.tex` |
-| Figure 5 — Worker Event Study | `Main Estimates/09_figure5_event_study_workers.R` | `event_study_empregados.png` |
+| Exhibit | Script |
+|:--|:--|
+| Figure 1 — Geographical Distribution | `Main Estimates/01_figure1_geographical_distribution_affected_area.R` |
+| Table 1 — Summary Statistics | `Main Estimates/01_table1_summary_statistics.R` |
+| Figure 2 — Aggregate Outcomes | `Main Estimates/02_figure2_evolution_aggregate_outcomes.R` |
+| Table 2 — Establishment Adjustment | `Main Estimates/03_table2_establishment_adjustment.R` |
+| Figure 4 — Establishment Event Study | `Main Estimates/04_figure4_event_study_establishments.R` |
+| Tables 3–5 | `Main Estimates/05_...R` through `07_...R` |
+| Table 6 — Dismissed Workers | `Main Estimates/08_table6_dismissed_workers.R` |
+| Figure 5 — Worker Event Study | `Main Estimates/09_figure5_event_study_workers.R` |
 
 ## Appendix
 
-| Section | Code folder | |
-|:--|:--|:--|
-| A | `Appendix/A_Municipal_Balance` | Municipal balance table |
-| B | `Appendix/B_Distance_Band_Analysis` | Distance-band table |
-| C | `Appendix/C_Establishment_Robustness` | Establishment robustness tables and figures |
-| E | `Appendix/E_Workers_Balancing` | Worker balance table |
-| F | `Appendix/F_Exposed_Workers` | Exposed-worker estimates |
-| G | `Appendix/G_Worker_Robustness` | Worker robustness figures |
-| H | `Appendix/H_Robust_Confidence_Intervals` | HonestDiD sensitivity figures |
+| Section | Code folder |
+|:--|:--|
+| A | `Appendix/A_Municipal_Balance` |
+| B | `Appendix/B_Distance_Band_Analysis` |
+| C | `Appendix/C_Establishment_Robustness` |
+| E | `Appendix/E_Workers_Balancing` |
+| F | `Appendix/F_Exposed_Workers` |
+| G | `Appendix/G_Worker_Robustness` |
+| H | `Appendix/H_Robust_Confidence_Intervals` |
 
 # Session information
 
