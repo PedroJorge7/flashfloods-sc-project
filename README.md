@@ -37,6 +37,8 @@ included in a code-only distribution.
 
 - `Natural Disastrer Santa Catarina - Dataset.dta`: establishment panel.
 - `workers_clean_data.rds`: worker panel.
+- `inundacao_2008.shp`: satellite-derived polygon layer identifying the
+  location and spatial extent of the areas flooded in 2008.
 - `municipal_balance_5km_nucleo.rds`: consolidated municipal balance
   database, including the BNDES disbursement measure used in Appendix Table
   A.1.
