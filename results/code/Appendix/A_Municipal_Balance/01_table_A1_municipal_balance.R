@@ -9,15 +9,15 @@
 # same subs_ibge classification as Table 1. Municipality 4208302 (core to
 # both treatment and control) is excluded from the two-sample test.
 # Reads the pre-built data/municipal_balance_5km_nucleo.rds. The file already
-# includes the 2002-2007 municipal BNDES disbursement average used below, so
-# the replication package needs only one municipal-balance input file.
+# includes 2002 municipal BNDES disbursements per capita, so the replication
+# package needs only one municipal-balance input file.
 # ============================================================================
 
 log_msg("=== 01_table_A1_municipal_balance.R: start ===")
 
 base_muni <- readRDS(data_path("municipal_balance_5km_nucleo.rds"))
 
-required_bndes_var <- "bndes_desembolsos_medios_2002_2007"
+required_bndes_var <- "bndes_desembolsos_pc_2002"
 if (!(required_bndes_var %in% names(base_muni))) {
   stop(
     "The consolidated municipal balance file is missing variable: ",
@@ -62,8 +62,8 @@ econ_vars <- c(
   indice_gini_2000 = "Gini Index",
   idhm_2000 = "Human Development Index",
   prop_ocupados_formalizacao_2000 = "Labor Formalization Rate (\\%)",
-  bndes_desembolsos_medios_2002_2007 =
-    "Average Annual BNDES Disbursements, 2002--2007 (BRL million)"
+  bndes_desembolsos_pc_2002 =
+    "BNDES Disbursements per Capita, 2002 (BRL)"
 )
 infra_vars <- c(
   dist_sede_rodovia_km = "Distance to Nearest Major Road (km)",
@@ -122,7 +122,7 @@ lines <- c(
   sprintf("    N. Municipalities & %s & & %s & & \\\\", n_treated, n_control),
   "    \\bottomrule", "    \\bottomrule", "    \\end{tabular}%",
   "    \\begin{tablenotes}[flushleft]",
-  "    \\item \\small \\textit{Notes:} This table compares pre-disaster characteristics of municipalities overlapping the treatment and control areas. Municipalities are assigned to each group according to whether their territories overlap the corresponding treatment or control area. BNDES disbursements are the municipality-level annual average over 2002--2007, expressed in constant BRL millions. The final column reports the difference in means between treated and control municipalities. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
+  "    \\item \\small \\textit{Notes:} This table compares pre-disaster characteristics of municipalities overlapping the treatment and control areas. Municipalities are assigned to each group according to whether their territories overlap the corresponding treatment or control area. BNDES disbursements are total municipal disbursements in 2002 divided by the municipality's 2002 population and are expressed in BRL per resident. The final column reports the difference in means between treated and control municipalities. *** represents p $<$ 0.01, ** represents p $<$ 0.05, * represents p $<$ 0.1.",
   "    \\end{tablenotes}", "  \\end{threeparttable}", "  }", "\\end{table}%"
 )
 
