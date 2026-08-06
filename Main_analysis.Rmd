@@ -43,12 +43,16 @@ The establishment-level treatment group contains firms located within 5 km
 of the mapped flood spots. The baseline control group contains firms located
 between 50 and 80 km from those spots.
 
-The flood-extent data were mapped from satellite radar imagery acquired after
-the 2008 disaster. The source layers combine flood classifications derived
-from TerraSAR-X, RADARSAT-2 (ascending and descending passes), and ENVISAT
-ASAR imagery into a single polygon layer. These radar data identify inundated
-areas despite cloud cover; distances from establishments to the mapped flood
-extent are then used to define the treatment and control rings.
+The satellite data collected and processed by \cite{marinho2012aplicaccao}
+identify the precise location and spatial extent of the areas flooded in
+2008. According to this mapping, the disaster generated more than 1,022
+flooded spots covering a total area of 7,452 hectares. The source layers
+combine flood classifications derived from TerraSAR-X, RADARSAT-2 (ascending
+and descending passes), and ENVISAT ASAR radar imagery into a single polygon
+layer. Because radar can detect inundation despite cloud cover, these data
+provide a detailed representation of the disaster footprint. Distances from
+establishments to the mapped flood extent are then used to define the
+treatment and control rings.
 
 # Directory structure
 
