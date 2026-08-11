@@ -4,11 +4,7 @@
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
 # Both Panel A (aggregated) and Panel B (time-varying) reported.
 # Depends on `main_panel`.
-#
-# No census-tract trend, same reasoning as Table 3: most tracts in these
-# size subsamples are entirely treated or entirely control, which
-# destabilizes a tract-specific trend.
-# ============================================================================
+## ============================================================================
 
 log_msg("=== 06_table4_effect_by_business_size.R: start ===")
 

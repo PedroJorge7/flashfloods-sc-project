@@ -1,29 +1,27 @@
 # ============================================================================
-# Appendix C, Table C.8 — Robustness of Establishment Closure to Alternative
-# Definitions
+# Appendix C, Table C.8 — Robustness of
+# Establishment Closure to Alternative Definitions
+# 08_table_C8_closure_alternative_definitions.R (replicated verbatim below),
+# applied to the corrected `main_panel` .
 #
 # Four columns, all on the Closure outcome:
 #   (1) Baseline    — closed in t if absent from RAIS in t+1 (`morte`).
-#   (2) Persistent  — closed in t only if ALSO absent in t+2.
+#   (2) Persistent  — closed in t if absent in BOTH t+1 and t+2,
 #   (3) Single-branch — (1), restricted to establishments with pre-disaster
 #       (2007-or-latest-prior-year) afil == 1.
 #   (4) Persistent, single-branch — combines (2) and (3).
 #
-# closure_2yr (persistent closure) is computed on the full `raw_data` (which
-# extends to 2016), not on `main_panel` (2003-2012), to avoid a boundary
-# artifact at the panel's edge. Depends on `main_panel`.
 # ============================================================================
 
 log_msg("=== 08_table_C8_closure_alternative_definitions.R: start ===")
 
-# Persistent-closure outcome: absent at both t+1 and t+2, then merged onto
-# main_panel and restricted to its treat_B sample.
 present_lookup <- raw_data %>%
   dplyr::distinct(id_estab, year) %>%
   dplyr::mutate(.present = TRUE)
 
 closure_2yr_wide <- raw_data %>%
-  dplyr::distinct(id_estab, year) %>%
+  dplyr::mutate(empregados_t = as.numeric(haven::zap_labels(empregados))) %>%
+  dplyr::distinct(id_estab, year, empregados_t) %>%
   dplyr::mutate(.year_t1 = year + 1L, .year_t2 = year + 2L) %>%
   dplyr::left_join(
     present_lookup %>% dplyr::rename(.year_t1 = year, .present_t1 = .present),
@@ -36,7 +34,7 @@ closure_2yr_wide <- raw_data %>%
   dplyr::mutate(
     .present_t1 = !is.na(.present_t1),
     .present_t2 = !is.na(.present_t2),
-    closure_2yr = as.numeric(!.present_t1 & !.present_t2)
+    closure_2yr = as.numeric(!.present_t1 & !.present_t2 & !is.na(empregados_t) & empregados_t > 0)
   ) %>%
   dplyr::select(id_estab, year, closure_2yr)
 
@@ -44,7 +42,6 @@ main_panel <- main_panel %>%
   dplyr::left_join(closure_2yr_wide, by = c("id_estab", "year")) %>%
   dplyr::mutate(closure_2yr = dplyr::if_else(is.na(treat_B), NA_real_, closure_2yr))
 
-# Single-branch sample: baseline (pre-2008) afil == 1.
 main_panel <- main_panel %>% dplyr::mutate(afil_num = as.numeric(haven::zap_labels(afil)))
 main_panel$afil_baseline <- make_baseline_value(main_panel, "afil_num")
 
@@ -52,7 +49,6 @@ panel_single_estab <- main_panel %>% dplyr::filter(afil_baseline == 1)
 log_msg("  Single-branch (afil_baseline==1) establishments: %d of %d",
         dplyr::n_distinct(panel_single_estab$id_estab), dplyr::n_distinct(main_panel$id_estab))
 
-# Fit all four specifications (Closure outcome only).
 res_col1 <- fit_establishment_models(main_panel, "morte", context = "Table C.8 / Baseline")
 res_col2 <- fit_establishment_models(main_panel, "closure_2yr", context = "Table C.8 / Persistent")
 res_col3 <- fit_establishment_models(panel_single_estab, "morte", context = "Table C.8 / Single-branch")
@@ -62,7 +58,6 @@ results_list <- list(res_col1, res_col2, res_col3, res_col4)
 col_labels   <- c("Baseline ($t+1$)", "Persistent ($t+1$ and $t+2$)",
                    "Single-Branch Firms", "Persistent, Single-Branch")
 
-# LaTeX table (4 columns, Panel A aggregated + Panel B time-varying).
 row_gap <- function(label_txt, vals) {
   inter <- as.vector(rbind(vals, rep("", length(vals))))
   paste0(label_txt, " & ", paste(inter, collapse = " & "), " \\\\")
@@ -72,8 +67,7 @@ post_est <- lapply(results_list, function(r) get_term(r$agg, "treat_B_agg"))
 coefA <- sapply(post_est, function(x) fmt_coef(x$estimate, x$p.value))
 seA   <- sapply(post_est, function(x) fmt_se(x$std.error))
 
-nobsA   <- sapply(results_list, function(r) r$nobs["agg"])
-nclustA <- sapply(results_list, function(r) r$nclust["agg"])
+nobsA <- sapply(results_list, function(r) r$nobs["agg"])
 
 lines <- c(
   "\\begin{table}[htb]", "  \\centering",
@@ -101,8 +95,7 @@ for (yr in tv_years) {
   lines <- c(lines, row_gap(sprintf("    Flash Flood %d", yr), coefB), row_gap("                     ", seB))
 }
 
-nobsB   <- sapply(results_list, function(r) r$nobs["timevar"])
-nclustB <- sapply(results_list, function(r) r$nclust["timevar"])
+nobsB <- sapply(results_list, function(r) r$nobs["timevar"])
 
 lines <- c(
   lines, "    \\midrule",
@@ -117,7 +110,6 @@ out_path_tex <- file.path(tables_dir, "Tab_C08_Closure_Robustness_Alternative_De
 writeLines(lines, out_path_tex)
 log_msg("Saved table: %s", out_path_tex)
 
-# Tidy CSV companion (one row per column x panel-B-year, plus the Panel A row).
 csv_rows <- list()
 for (i in seq_along(results_list)) {
   r <- results_list[[i]]

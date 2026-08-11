@@ -1,11 +1,12 @@
 # ============================================================================
-# Appendix C, Table C.3 — Establishment-Level Estimates Including Control
-# Variables
+# [New_Results, CORRECTED] Appendix C, Table C.3 — Establishment-Level
+# Estimates Including Control Variables
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
 # Baseline (2007-or-latest-prior-year) covariates are interacted with year,
 # since they are time-invariant per establishment and would otherwise be
 # collinear with the establishment FE. Controls used: employees, number of
-# firm branches, worker age, male share. Depends on `main_panel`.
+# firm branches, worker age, male share. Depends on `main_panel` (corrected,
+# full-life panel from 00a_load_establishment_data.R).
 # ============================================================================
 
 log_msg("=== 03_table_C3_establishment_controls.R: start ===")

@@ -1,10 +1,11 @@
 # ============================================================================
-# Appendix G, Figure G.3 — Worker Level Estimates Increasing Post-Treatment
-# Period
+# Appendix G, Figure G.3 — Worker Level Estimates
+# Increasing Post-Treatment Period
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
 # Employment outcome only, shown as a coefficient-by-period figure (Post +
 # year-specific effects, 2008-2016). Uses the full `dados` (2002-2016, not
-# truncated to 2012 like `dados_main`) from 00b_load_worker_data.R.
+# truncated to 2012 like `dados_main`) from 00b_load_worker_data.R and the
+# corrected output_empregados().
 # ============================================================================
 
 log_msg("=== 03_figure_G3_extended_post_treatment_workers.R: start ===")
@@ -29,7 +30,7 @@ fig <- ggplot(all_results, aes(x = Period, y = Coefficient)) +
   labs(x = "Year", y = "Coefficient") +
   theme_bw()
 
-out_path <- file.path(figures_dir, "longpanel_empregados.png")
+out_path <- file.path(figures_dir, "Fig_G03_Worker_Longer_Panel_5km_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 8, height = 6, units = "in")
 log_msg("Saved figure: %s", out_path)
 

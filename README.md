@@ -10,6 +10,31 @@ geocoded employer–employee data with mapped flood spots from the 2008 Santa
 Catarina flash floods. Establishments within 5 km form the treatment group,
 and establishments between 50 and 80 km form the baseline control group.
 
+### From national RAIS to the analytical sample
+
+The analysis starts from the restricted annual nationwide files of the
+Relação Anual de Informações Sociais (RAIS). Records are standardized across
+years, linked with confidential establishment and worker identifiers, and
+establishment addresses are geocoded. Each establishment's pre-disaster
+location in 2007 is then matched to the 2008 flood map and its distance to
+the nearest mapped flooded area is calculated. The sample restriction is
+imposed at this stage: establishments no more than 5 km away enter the
+treatment area and those 50--80 km away enter the baseline control area;
+establishments in the 5--50 km gap or beyond 80 km are excluded from the
+baseline comparison.
+
+After treatment status is fixed using the 2007 baseline location, the same
+confidential identifiers are merged back to the annual RAIS files to follow
+establishments backward and forward through time. Outcomes remain observed
+after relocation, even if a later location lies outside the original distance
+bands. The main establishment panel covers 2003--2012 and the extended panel
+runs through 2016. The worker
+panel retains workers employed at the same establishment in 2006 and 2007 and
+tracks their later employment, earnings, and location; its main and extended
+windows likewise end in 2012 and 2016. The repository starts from the
+restricted analytical extracts because the national microdata and the
+identified intermediate files cannot be distributed.
+
 ## Structure
 
 ```text
@@ -38,7 +63,9 @@ included in a code-only distribution.
 - `Natural Disastrer Santa Catarina - Dataset.dta`: establishment panel.
 - `workers_clean_data.rds`: worker panel.
 - `inundacao_2008.shp`: satellite-derived polygon layer identifying the
-  location and spatial extent of the areas flooded in 2008.
+  location and spatial extent of the areas flooded in 2008. The underlying
+  synthetic aperture radar (SAR) data and derived layer were made available
+  by Marinho and are documented in Marinho (2012).
 - `municipal_balance_5km_nucleo.rds`: consolidated municipal balance
   database, including the BNDES disbursement measure used in Appendix Table
   A.1.
@@ -114,4 +141,13 @@ Access to the restricted microdata must be requested directly from the
 responsible data custodians and is subject to their authorization,
 confidentiality requirements, and secure-use procedures. This repository
 therefore provides the replication code and documentation, but not the
-underlying restricted databases.
+underlying restricted databases. Specifically, the nationwide RAIS files,
+geocoded establishment addresses, longitudinal identifier crosswalks, and
+derived establishment and worker panels cannot be redistributed.
+
+The SAR imagery and derived 2008 flood polygons used to measure exposure were
+made available by Marinho and are documented in Marinho (2012). They are not
+included in this public repository; access or redistribution requires
+authorization from the relevant data provider. An authorized replicator must
+place both the RAIS-derived analytical files and the flood layer in the local
+`data/` directory before running the code.

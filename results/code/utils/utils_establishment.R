@@ -1,17 +1,7 @@
-# ============================================================================
-# utils_establishment.R
-#
-# Shared helpers for the establishment-level analysis: treatment is 0-5 km
-# from the flood spots vs. a 50-80 km control ring, with standard errors
-# clustered at the census-tract level.
-#
-# Contents: panel construction (build_establishment_panel), panel caching
-# (build_or_load_panel), the standard aggregated/time-varying/event-study
-# model fit (fit_establishment_models), sector and size-bin helpers, baseline-
-# covariate constructors, LaTeX table/figure formatting and output helpers
-# (emit_closure_relocation_table, emit_closure_relocation_event_study), and
-# small utilities (logging, numeric ID coercion, coefficient formatting).
-# ============================================================================
+# Shared establishment-level helpers: panel construction, model fitting, and
+# LaTeX table/figure output. Treatment: 0-5 km vs. 50-80 km control, SEs
+# clustered by census tract. treat_B is fixed once per establishment from its
+# 2007 baseline (see build_establishment_panel() below).
 
 library(dplyr)
 library(tidyr)
@@ -54,44 +44,19 @@ make_numeric_id <- function(x) {
   x_num
 }
 
-carry_treatment_forward <- function(treat, mover) {
-  out <- treat
-  for (i in seq_along(out)) {
-    if (i > 1 && is.na(out[i]) && !is.na(mover[i]) && mover[i] == 1)
-      out[i] <- out[i - 1]
-  }
-  out
-}
-
 # -----------------------------------------------------------------------------
-# build_establishment_panel()
-#
-# General-purpose panel builder. Same construction logic as Table 3/Figure 4
-# in the original paper (treat_B carry-forward on movers, reloc_tract_tminus1
-# via lead of code_tract, year-specific dummies), but:
-#   - accepts a configurable control_rule (default 50-80 km, matching the
-#     paper) so the same function serves both the main 0-5km panel and the
-#     alternative-ring/-radius robustness loops
-#   - accepts a configurable year range (default 2003-2012; Table C.4 needs
-#     2003-2016)
-#   - preserves new_firm and raw mover_ano_mun on the panel (new_firm is
-#     needed by Figure 2) in addition to morte/reloc_tract_tminus1
-#
-# Arguments:
-#   raw_data     - the raw establishment panel (already read once)
-#   treated_rule - function(dist_flood) -> logical, treated definition
-#   label        - short label for logging
-#   control_rule - function(dist_flood) -> logical, control definition
-#                  (default: 50-80 km, the paper's baseline)
-#   year_min/year_max - sample year range (default 2003-2012)
-#   dummy_years  - which years get treat_B_YYYY dummies (default year_min:year_max)
+# build_establishment_panel() — general-purpose panel builder. Treatment is
+# fixed once per establishment from its 2007 (or earliest available)
+# distance band; outcomes (morte, new_firm, mover_ano_mun,
+# reloc_tract_tminus1) are never nulled based on a later year's distance, so
+# relocated establishments stay in the panel.
 # -----------------------------------------------------------------------------
 build_establishment_panel <- function(raw_data, treated_rule, label,
                                        control_rule = function(d) dplyr::between(d, 50, 80),
                                        year_min = 2003, year_max = 2012,
                                        dummy_years = NULL) {
 
-  log_msg("Building establishment panel: %s (years %d-%d)", label, year_min, year_max)
+  log_msg("Building establishment panel [CORRECTED, full life-of-firm]: %s (years %d-%d)", label, year_min, year_max)
 
   if (is.null(dummy_years)) dummy_years <- year_min:year_max
 
@@ -101,27 +66,28 @@ build_establishment_panel <- function(raw_data, treated_rule, label,
     mutate(
       morte         = as.numeric(haven::zap_labels(morte)),
       mover_ano_mun = as.numeric(haven::zap_labels(mover_ano_mun)),
-      new_firm      = if (has_new_firm) as.numeric(haven::zap_labels(new_firm)) else NA_real_
-    ) %>%
-    arrange(id_estab, year) %>%
-    group_by(id_estab) %>%
-    mutate(
-      treat_B = case_when(
+      new_firm      = if (has_new_firm) as.numeric(haven::zap_labels(new_firm)) else NA_real_,
+      dist_flood_band = case_when(
         treated_rule(dist_flood) ~ 1,
         control_rule(dist_flood) ~ 0,
         TRUE                     ~ NA_real_
-      ),
-      morte_orig         = morte,
-      new_firm_orig      = new_firm,
-      mover_ano_mun_orig = mover_ano_mun
+      )
     ) %>%
-    mutate(
-      morte         = if_else(is.na(treat_B), NA_real_, morte_orig),
-      new_firm      = if_else(is.na(treat_B), NA_real_, new_firm_orig),
-      treat_B       = carry_treatment_forward(treat_B, mover_ano_mun_orig),
-      mover_ano_mun = if_else(is.na(treat_B), NA_real_, mover_ano_mun_orig)
-    ) %>%
+    arrange(id_estab, year)
+
+  # Fixed baseline classification: prefer each establishment's 2007 record;
+  # fall back to its earliest available year with a classifiable dist_flood.
+  baseline <- data %>%
+    filter(!is.na(dist_flood_band)) %>%
+    arrange(id_estab, dplyr::desc(year == 2007), year) %>%
+    group_by(id_estab) %>%
+    slice(1) %>%
     ungroup() %>%
+    transmute(id_estab, treat_B_baseline = dist_flood_band)
+
+  data <- data %>%
+    left_join(baseline, by = "id_estab") %>%
+    mutate(treat_B = treat_B_baseline) %>%
     filter(year >= year_min & year <= year_max) %>%
     mutate(
       treat_trend    = if_else(year >= 2008, 1, 0),
@@ -328,20 +294,8 @@ make_baseline_value <- function(df, varname) {
 }
 
 # -----------------------------------------------------------------------------
-# Baseline-or-earliest construction (Table 4's sector classification): same
-# preference order as make_baseline_value() (2007, else nearest prior year),
-# but for establishments with NO record at or before 2007 (i.e. they only
-# enter the panel in 2008 or later), falls back to that establishment's
-# earliest available year instead of 0 -- avoiding both (a) treating a
-# post-treatment sector code as if it were baseline (the make_baseline_value()
-# fallback of 0 does not match any real code, which is fine for a numeric
-# control but would silently exclude these establishments from every sector
-# group here) and (b) using the LATEST observed value, which for many
-# establishments would fall in the post-treatment period and could itself be
-# a consequence of treatment (bad control). The fallback still uses the
-# EARLIEST available record for that establishment, which is the closest
-# possible approximation to a pre-treatment value when no true pre-2007 data
-# exists.
+# Like make_baseline_value(), but falls back to the earliest available year
+# instead of 0 when there's no record at or before 2007.
 # -----------------------------------------------------------------------------
 make_baseline_or_earliest_value <- function(df, varname) {
   df %>%
@@ -358,9 +312,8 @@ make_baseline_or_earliest_value <- function(df, varname) {
 }
 
 # -----------------------------------------------------------------------------
-# ECP (public-calamity) municipality lists. `ecp_municipalities_2011` is used
-# by Table C.7 (dropping units affected by the 2011 floods); the generic list
-# is used only by the Unused/ ECP script.
+# ECP (public-calamity) municipality lists (not used by Main Estimates, kept
+# for parity with the main utils file).
 # -----------------------------------------------------------------------------
 ecp_municipalities_generic <- c(420220, 420240, 420290, 420320, 420590, 420710, 420820,
                                  420845, 421150, 421320, 421470, 421510, 421820)
@@ -369,7 +322,7 @@ ecp_municipalities_2011    <- c(420030, 420190, 420290, 420850, 420950, 420990,
 
 # -----------------------------------------------------------------------------
 # make_first_year_value(): each establishment's value of `varname` at its
-# first observed year in the data (used for Table 6's baseline controls).
+# first observed year in the data (used for Table 5's baseline controls).
 # -----------------------------------------------------------------------------
 make_first_year_value <- function(df, varname) {
   df %>%
@@ -381,13 +334,9 @@ make_first_year_value <- function(df, varname) {
 }
 
 # -----------------------------------------------------------------------------
-# emit_closure_relocation_table()
-# Generic 2-column (Closure, Relocation) Panel A (aggregated) + Panel B
-# (time-varying) LaTeX table, tract-clustered. Used by several Appendix C
-# robustness tables, so each caller only needs to supply the fitted models
-# and a caption/label/notes string. Pass `notes_full` to replace the note
-# text entirely (verbatim manuscript wording); otherwise `notes_extra` is
-# appended to a generic default note.
+# emit_closure_relocation_table() / emit_closure_relocation_event_study()
+# Shared 2-outcome (Closure, Relocation) table/figure builder, used by the
+# Appendix C robustness scripts.
 # -----------------------------------------------------------------------------
 emit_closure_relocation_table <- function(res_closure, res_reloc, out_path, caption, label, notes_extra = "", notes_full = NULL) {
 
@@ -405,8 +354,7 @@ emit_closure_relocation_table <- function(res_closure, res_reloc, out_path, capt
   coefA <- sapply(post_est, function(x) fmt_coef(x$estimate, x$p.value))
   seA   <- sapply(post_est, function(x) fmt_se(x$std.error))
 
-  nobsB   <- c(res_closure$nobs["timevar"], res_reloc$nobs["timevar"])
-  nclustB <- c(res_closure$nclust["timevar"], res_reloc$nclust["timevar"])
+  nobsB <- c(res_closure$nobs["timevar"], res_reloc$nobs["timevar"])
 
   lines <- c(
     "\\begin{table}[htb]", "  \\centering",
@@ -457,10 +405,6 @@ emit_closure_relocation_table <- function(res_closure, res_reloc, out_path, capt
   log_msg("Saved table: %s", out_path)
 }
 
-# -----------------------------------------------------------------------------
-# emit_closure_relocation_event_study()
-# Generic 2-panel (Closure, Relocation) event-study figure, tract-clustered.
-# -----------------------------------------------------------------------------
 emit_closure_relocation_event_study <- function(res_closure, res_reloc, out_path, subtitle = "") {
   df_c <- event_study_frame(res_closure$event)
   df_r <- event_study_frame(res_reloc$event)

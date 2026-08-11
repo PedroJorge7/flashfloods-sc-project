@@ -77,7 +77,3 @@ Computed from each worker's 2007 `grau_instr` value (`educ_2007` in the relevant
 ## Municipal balance data (`municipal_balance_5km_nucleo.rds`)
 
 One row per municipality in the "nucleo" treatment/control set (12 treatment + 23 control, selected by dominant establishment count within each ring). Columns are the 24 balance variables used in Table A.1 (geographic/climatic, demographic, socioeconomic, infrastructure, and RAIS-2002 industry-composition shares) plus `codigo_municipio` (6-digit municipality code) and `grupo` (`"Tratamento"` / `"Controle"` / `"Ambos"` — the last for the one municipality present in both rings, excluded from the balance test).
-
-The BNDES measure, `bndes_desembolsos_pc_2002`, is total municipal
-disbursements in 2002 divided by the municipality's 2002 population (BRL per
-resident).

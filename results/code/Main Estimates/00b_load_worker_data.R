@@ -28,10 +28,17 @@ log_msg("Loaded worker panel: %d rows, %d columns, in %.1f sec (year range %d-%d
         nrow(dados_raw), ncol(dados_raw), as.numeric(difftime(Sys.time(), t0, units = "secs")),
         min(dados_raw$year, na.rm = TRUE), max(dados_raw$year, na.rm = TRUE))
 
-# Only workers employed in 2006 and 2007 at the same establishment enter the
-# analysis sample.
-dados <- dados_raw %>% filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE)
-log_msg("After emprego_06_07/mesma_empresa_06_07 pre-filter: %d rows (from %d)", nrow(dados), nrow(dados_raw))
+# [CORRECTED, 2nd pass] The original pre-filter restricted the sample to
+# workers employed at the same establishment in BOTH 2006 and 2007
+# (emprego_06_07 == 1 & mesma_empresa_06_07 == TRUE). That restriction makes
+# `empregado` (employment status) exactly 1 for 100% of the sample in both
+# 2006 and 2007 by construction -- confirmed empirically (zero variation in
+# either year). Since the event-study spec includes 2006 as a pre-treatment
+# period, its treat x year2006 coefficient was mechanically unidentified
+# (zero, not a substantive finding about pre-trends). Removed here so 2006
+# (and other pre-period years) carry real employment variation.
+dados <- dados_raw
+log_msg("No emprego_06_07/mesma_empresa_06_07 pre-filter applied: %d rows", nrow(dados))
 
 # The raw file spans 2002-2016. Most worker-level scripts use 2002-2012
 # (`dados_main`); the extended post-treatment-period script (Appendix G.3)

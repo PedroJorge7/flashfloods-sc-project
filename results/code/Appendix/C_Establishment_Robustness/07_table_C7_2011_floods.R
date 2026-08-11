@@ -1,9 +1,10 @@
 # ============================================================================
-# Appendix C, Table C.7 — Establishment-Level Estimates Dropping Units
-# Affected by the 2011 Floods
+# Appendix C, Table C.7 — Establishment-Level
+# Estimates Dropping Units Affected by the 2011 Floods
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract. Drops
 # establishments located in the 11-municipality, 2011-specific ECP list
-# entirely. Depends on `main_panel`.
+# entirely. Depends on `main_panel` (already the corrected, full-life panel
+# from 00a_load_establishment_data.R).
 # ============================================================================
 
 log_msg("=== 07_table_C7_2011_floods.R: start ===")

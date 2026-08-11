@@ -1,10 +1,10 @@
 # ============================================================================
-# Appendix E, Table E.1 — Comparison of Variables Before and After Data
-# Balancing
+# Appendix E, Table E.1 — Comparison of Variables Before and
+# After Data Balancing
 # Replicates output_empregados()'s PSM step (0-5 km treatment vs. 50-80 km
 # control, 2007 cross-section) independently, to expose the pre- and
-# post-matching samples for a balance check. Does not modify
-# worker_functions.R. Uses `dados_main` from 00b_load_worker_data.R.
+# post-matching samples for a balance check. This is a static 2007
+# cross-sectional comparison - Uses `dados_main` from 00b_load_worker_data.R.
 # ============================================================================
 
 log_msg("=== 01_table_E1_workers_balancing.R: start ===")
