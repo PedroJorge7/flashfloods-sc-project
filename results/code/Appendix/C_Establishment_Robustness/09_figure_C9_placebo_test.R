@@ -1,16 +1,14 @@
 # ============================================================================
-# Appendix C, Figure C.9 — Falsification Test for the Control Area in
-# Establishment-Level Estimates
+# Appendix C, Figure C.9 — Falsification Test for
+# the Control Area in Establishment-Level Estimates
 # The "treated" group here is the ordinary 50-80 km control ring, compared
 # against four far-away placebo "control" rings (200-240 km) where no true
-# effect should exist. Clustering: census tract. Uses `raw_data` (each
-# placebo ring needs its own panel).
+# effect should exist. Uses `raw_data` (each placebo ring needs its own
+# panel, via the corrected build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 09_figure_C9_placebo_test.R: start ===")
 
-# reloc_tract_tminus1 is recomputed here on the full raw_data (not the
-# 2003-2012 panel) to avoid a boundary artifact at year_max.
 reloc_fixed <- raw_data %>%
   dplyr::mutate(code_tract_num = make_numeric_id(code_tract)) %>%
   dplyr::arrange(id_estab, year) %>%
@@ -48,7 +46,7 @@ for (ring_label in names(control_specs)) {
   control_rule <- local({ lo <- spec$lower; hi <- spec$upper; function(d) dplyr::between(d, lo, hi) })
   ring_tag <- gsub("[^A-Za-z0-9]+", "_", ring_label)
   panel <- build_or_load_panel(
-    file.path(cache_dir, sprintf("B4_panel_%s.rds", ring_tag)),
+    file.path(cache_dir, sprintf("C9_panel_%s.rds", ring_tag)),
     function() build_establishment_panel(raw_data, placebo_treated_rule, sprintf("C.9 placebo=%s", ring_label), control_rule = control_rule)
   )
   panel <- apply_reloc_fix(panel)
@@ -70,7 +68,6 @@ for (ring_label in names(control_specs)) {
     }
     rm(res)
   }
-  # Free this placebo ring's panel before building the next one.
   rm(panel)
   gc(full = TRUE)
 }
@@ -81,12 +78,7 @@ all_results <- all_results %>%
     Placebo_Ring = factor(Placebo_Ring, levels = names(control_specs))
   )
 
-placebo_colors <- c(
-  "200-210 km" = "#FEE0D2",
-  "200-230 km" = "#FCBBA1",
-  "230-240 km" = "#FB6A4A",
-  "210-240 km" = "#CB181D"
-)
+placebo_colors <- c("200-210 km" = "#FEE0D2", "200-230 km" = "#FCBBA1", "230-240 km" = "#FB6A4A", "210-240 km" = "#CB181D")
 
 make_panel <- function(df, title_label) {
   ggplot(df, aes(x = Period, y = Coefficient, color = Placebo_Ring)) +
@@ -102,7 +94,7 @@ pA <- make_panel(filter(all_results, Outcome == "Closure"), "A - Establishment C
 pB <- make_panel(filter(all_results, Outcome == "Relocation"), "B - Establishment Relocation")
 fig <- ggpubr::ggarrange(pA, pB, ncol = 2, common.legend = TRUE, legend = "bottom")
 
-out_path <- file.path(figures_dir, "results_falso_tratamento2.png")
+out_path <- file.path(figures_dir, "Fig_C09_Falsification_Test_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 12, height = 6, units = "in")
 log_msg("Saved figure: %s", out_path)
 

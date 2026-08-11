@@ -12,7 +12,7 @@ es_data <- output_trend %>% filter(!grepl("migration", Regression, ignore.case =
 
 fig <- event_study_plot("A - Employment (1/0)", es_data) + labs(title = NULL)
 
-out_path <- file.path(figures_dir, "event_study_empregados.png")
+out_path <- file.path(figures_dir, "Fig_05_EventStudy_Workers_5km_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 18, height = 12, units = "cm")
 log_msg("Saved figure: %s", out_path)
 

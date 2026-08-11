@@ -1,11 +1,10 @@
 # ============================================================================
-# Appendix B — Complementary Distance-Band Analysis of Establishment Closure
-# Data-driven distance-band exercise: separate regressions for each 2.5 km
-# ring from the flood spots (0-2.5, 2.5-5, 5-7.5, 7.5-10, 10-12.5, 12.5-15,
-# 15-17.5 km), control ring fixed at 50-80 km, Closure outcome. Census-tract
-# trend included. Clustering: census tract. Two panels: Panel A (aggregated
-# post-treatment dummy) and Panel B (time-varying).
-# Uses `raw_data` (each band needs its own panel build).
+# Appendix B — Complementary Distance-Band Analysis
+# of Establishment Closure
+# Separate regressions for each 2.5 km ring from the flood spots (0-2.5,
+# 2.5-5, 5-7.5, 7.5-10, 10-12.5, 12.5-15, 15-17.5 km), control ring fixed at
+# 50-80 km, Closure outcome. Uses `raw_data` (each band needs its own panel
+# build, via the corrected build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 01_table_B1_distance_band_analysis.R: start ===")

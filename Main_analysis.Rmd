@@ -43,16 +43,52 @@ The establishment-level treatment group contains firms located within 5 km
 of the mapped flood spots. The baseline control group contains firms located
 between 50 and 80 km from those spots.
 
-The satellite data collected and processed by \cite{marinho2012aplicaccao}
-identify the precise location and spatial extent of the areas flooded in
-2008. According to this mapping, the disaster generated more than 1,022
-flooded spots covering a total area of 7,452 hectares. The source layers
+The synthetic aperture radar (SAR) data used in this project were made
+available by Marinho and were collected and processed as described in
+\cite{marinho2012aplicaccao}. They identify the precise location and spatial
+extent of the areas flooded in 2008. According to this mapping, the disaster
+generated more than 1,022 flooded spots covering a total area of 7,452
+hectares. The source layers
 combine flood classifications derived from TerraSAR-X, RADARSAT-2 (ascending
 and descending passes), and ENVISAT ASAR radar imagery into a single polygon
 layer. Because radar can detect inundation despite cloud cover, these data
 provide a detailed representation of the disaster footprint. Distances from
 establishments to the mapped flood extent are then used to define the
 treatment and control rings.
+
+## From the national RAIS files to the analytical panels
+
+The restricted microdata used in the analysis originate in the annual,
+nationwide files of the Relação Anual de Informações Sociais (RAIS). The raw
+RAIS records are first standardized across years, and the confidential
+establishment and worker identifiers are used to link observations over
+time. Establishment addresses are geocoded and spatially joined to the 2008
+SAR flood map. For every establishment, we calculate the distance from its
+pre-disaster 2007 location to the nearest mapped flooded area.
+
+The geographic restriction is imposed using the 2007 baseline, before the
+disaster and before outcomes are followed:
+establishments located no more than 5 km from a mapped flooded area form the
+treatment area, while establishments located between 50 and 80 km form the
+baseline control area. Establishments in the intervening 5--50 km band or
+beyond 80 km are not part of the baseline comparison. Once this baseline
+sample and treatment status have been defined, the confidential identifiers
+are used to recover the same establishments from the annual RAIS files and
+track them backward and forward over time. Thus, later outcomes do not cause
+an establishment to enter the treatment or control area; the spatial groups
+are anchored to the pre-disaster location. Outcomes remain observed after a
+unit relocates, including when its later location falls outside the original
+distance bands. The main establishment panel covers 2003--2012, and the
+extended analysis follows establishments through 2016.
+
+The worker panel is constructed from the linked employment records of these
+establishments. The baseline worker sample retains workers employed at the
+same establishment in 2006 and 2007 and follows their subsequent employment,
+earnings, and location in RAIS. Most worker analyses cover 2003--2012, while
+the extended specifications continue through 2016. These processing steps
+were carried out in the authorized secure environment; the repository begins
+with the resulting restricted analytical files because neither the national
+RAIS microdata nor the intermediate identified crosswalks can be released.
 
 # Directory structure
 
@@ -176,4 +212,14 @@ Access to the restricted microdata must be requested directly from the
 responsible data custodians and is subject to their authorization,
 confidentiality requirements, and secure-use procedures. The replication
 package therefore provides the code and documentation, but not the underlying
-restricted databases.
+restricted databases. In particular, the nationwide RAIS files, geocoded
+establishment addresses, longitudinal identifier crosswalks, and the derived
+establishment and worker panels cannot be redistributed.
+
+The SAR imagery and derived 2008 flood polygons used to construct distance to
+the disaster were made available by Marinho and are documented in
+\cite{marinho2012aplicaccao}. They are not included in this public package;
+access or redistribution requires authorization from the relevant data
+provider. The code therefore expects the authorized user to place both the
+restricted RAIS-derived files and the flood layer in the local `data`
+directory.

@@ -1,10 +1,10 @@
 # ============================================================================
-# Appendix G, Figure G.2 — Alternative Sizes of the Treatment Radius in
-# Worker-Level Estimations
+# Appendix G, Figure G.2 — Alternative Sizes of the
+# Treatment Radius in Worker-Level Estimations
 # Radius ladder: 2.5, 5 (reference), 7.5, 10, 12.5, 15 km; control fixed at
 # 50-80 km. Clustering: census tract. Employment outcome only. Uses
-# `dados_main` (2002-2012) from 00b_load_worker_data.R. Matches the radius
-# ladder used in the establishment-level analogue (Figure C.2).
+# `dados_main` (2002-2012) from 00b_load_worker_data.R and the corrected
+# output_empregados().
 # ============================================================================
 
 log_msg("=== 02_figure_G2_alternative_treatment_radius_workers.R: start ===")
@@ -41,12 +41,6 @@ all_results <- bind_rows(lapply(names(outputs_list), function(k) {
     )
 }))
 
-# output_empregados()'s regression formula always includes treat_B_2008
-# through treat_B_2016 as regressors (unchanged from the original
-# read_functions.R). Since this figure uses `dados_main` (2002-2012), years
-# 2013-2016 have no actual observations, so those dummy columns are
-# structurally constant-zero and their coefficients are undefined/NA.
-# Dropped here since only 2008-2012 have real data.
 all_results <- all_results %>% filter(Period %in% c("Post", as.character(2008:2012)))
 
 if (nrow(all_results) > 0) {
@@ -70,7 +64,7 @@ if (nrow(all_results) > 0) {
 
   fig <- make_panel(all_results)
 
-  out_path <- file.path(figures_dir, "Fig_F02_Alternative_Treatment_Radius_Workers_5km_tract.png")
+  out_path <- file.path(figures_dir, "Fig_G02_Alternative_Treatment_Radius_Workers_5km_tract.png")
   ggsave(filename = out_path, plot = fig, dpi = 300, width = 8, height = 6, units = "in")
   log_msg("Saved figure: %s", out_path)
 }

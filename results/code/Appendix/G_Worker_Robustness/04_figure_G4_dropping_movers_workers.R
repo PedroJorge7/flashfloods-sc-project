@@ -1,11 +1,10 @@
 # ============================================================================
-# Appendix G, Figure G.4 — Worker Level Estimates Dropping Units that Moved
-# Across Areas
+#  Appendix G, Figure G.4 — Worker Level
+# Estimates Dropping Units that Moved Across Areas
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
-# Employment outcome only, shown as a coefficient-by-period figure (Post +
-# year-specific effects). `remove_treat_control_mob = TRUE` drops workers
-# whose treated/control ring status switches across the panel. Uses
-# `dados_main` (2002-2012).
+# Employment outcome only, shown as a coefficient-by-period figure. Uses
+# `dados_main` (2002-2012) from 00b_load_worker_data.R and the corrected
+# output_empregados().
 # ============================================================================
 
 log_msg("=== 04_figure_G4_dropping_movers_workers.R: start ===")
@@ -31,7 +30,7 @@ fig <- ggplot(all_results, aes(x = Period, y = Coefficient)) +
   labs(x = "Year", y = "Coefficient") +
   theme_bw()
 
-out_path <- file.path(figures_dir, "drop_units_empregados.png")
+out_path <- file.path(figures_dir, "Fig_G04_Worker_Dropping_Movers_5km_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 8, height = 6, units = "in")
 log_msg("Saved figure: %s", out_path)
 

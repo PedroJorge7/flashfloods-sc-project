@@ -1,94 +1,87 @@
 # ============================================================================
-# run_appendix.R
+# run_appendix.R  [CORRECTED appendix robustness checks]
 #
-# Runs every script that produces an appendix table or figure, organized by
-# appendix section (A-H) and, within each section, in the order results
-# appear. See README.md for details and required inputs.
+# Runs the appendix robustness scripts using the corrected
+# utils_establishment.R / worker_functions.R
+# (same correction as run_main_estimates.R: fixed baseline treatment, no
+# mover-year outcome nulling).
 #
-# Appendix D (Auxiliary Maps) has no script: those are static images, not
-# computed from the data.
+# `steps` is built up incrementally, simplest checks first: scripts that
+# just call the corrected build_establishment_panel()/output_empregados()
+# with different bands need no new logic and were added first; scripts that
+# need new logic in the shared utils (remove_treat_control_mob, exposed
+# workers, custom inference, etc.) are added as that logic is built out.
 # ============================================================================
 
 run_start_time <- Sys.time()
 
-resolve_project_root <- function() {
+resolve_paths <- function() {
   ofile <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
-  if (!is.null(ofile) && nzchar(ofile)) {
-    return(normalizePath(file.path(dirname(ofile), "..", ".."),
-                         winslash = "/", mustWork = TRUE))
+  if (is.null(ofile) || !nzchar(ofile)) {
+    args <- commandArgs(trailingOnly = FALSE)
+    file_arg <- sub("^--file=", "", args[grepl("^--file=", args)])
+    if (length(file_arg) > 0) ofile <- file_arg[1]
   }
-  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+  if (!is.null(ofile) && nzchar(ofile) && file.exists(ofile)) {
+    code_dir          <- normalizePath(dirname(ofile), winslash = "/", mustWork = TRUE)
+    results_dir       <- dirname(code_dir)
+    true_project_root <- dirname(results_dir)
+  } else {
+    true_project_root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+    results_dir       <- file.path(true_project_root, "results")
+    code_dir          <- file.path(results_dir, "code")
+  }
+  list(code_dir = code_dir, results_dir = results_dir, project_root = true_project_root)
 }
+paths <- resolve_paths()
 
-project_root <- resolve_project_root()
-setwd(project_root)
-if (!dir.exists(file.path(project_root, "results", "code")) || !dir.exists(file.path(project_root, "data"))) {
-  stop("Could not confirm project_root at: ", project_root)
-}
+project_root <- paths$project_root
+script_dir   <- paths$code_dir
+if (!dir.exists(file.path(project_root, "data"))) stop("Could not confirm project_root (data/ not found) at: ", project_root)
 
-script_dir    <- file.path(project_root, "results", "code")
-main_dir      <- file.path(script_dir, "Main Estimates")
-appendix_dir  <- file.path(script_dir, "Appendix")
-output_root   <- file.path(project_root, "results")
-tables_dir    <- file.path(output_root, "analysis")
-figures_dir   <- file.path(output_root, "analysis")
-logs_dir      <- file.path(output_root, "logs")
-cache_dir     <- file.path(output_root, "cache")
+main_dir     <- file.path(script_dir, "Main Estimates")
+appendix_dir <- file.path(script_dir, "Appendix")
+output_root  <- file.path(paths$results_dir, "analysis")
+tables_dir   <- file.path(output_root, "tables")
+figures_dir  <- file.path(output_root, "figures")
+logs_dir     <- file.path(output_root, "logs")
+cache_dir    <- file.path(output_root, "cache")
 for (d in c(tables_dir, figures_dir, logs_dir, cache_dir)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
 
 source(file.path(script_dir, "utils", "path_utils.R"))
 source(file.path(script_dir, "utils", "utils_establishment.R"))
 
-# Several appendix sections need both the establishment panel and the worker
-# data, so both loaders are run up front (mirrors run_main_estimates.R).
 source(file.path(main_dir, "00a_load_establishment_data.R"))
 source(file.path(main_dir, "00b_load_worker_data.R"))
 
 steps <- c(
+  # --- unaffected supporting exhibits retained in the complete runner ---
   "A_Municipal_Balance/01_table_A1_municipal_balance.R",
+  # --- simplest: vary distance bands only, reuse corrected panel builder / output_empregados() as-is ---
   "B_Distance_Band_Analysis/01_table_B1_distance_band_analysis.R",
-  "B_Distance_Band_Analysis/03_table_B3_business_sorting.R",
   "C_Establishment_Robustness/01_figure_C1_alternative_control_rings.R",
   "C_Establishment_Robustness/02_figure_C2_alternative_treatment_radius.R",
-  "C_Establishment_Robustness/03_table_C3_establishment_controls.R",
-  "C_Establishment_Robustness/04_table_C4_extended_post_treatment.R",
-  "C_Establishment_Robustness/05_table_C5_alternative_inference.R",
   "C_Establishment_Robustness/07_table_C7_2011_floods.R",
-  "C_Establishment_Robustness/08_table_C8_closure_alternative_definitions.R",
   "C_Establishment_Robustness/09_figure_C9_placebo_test.R",
-  "E_Workers_Balancing/01_table_E1_workers_balancing.R",
-  "F_Exposed_Workers/01_table_F1_exposed_workers.R",
-  "F_Exposed_Workers/03_table_F3_dropping_movers_workers.R",
+  "C_Establishment_Robustness/06_table_C6_business_sorting.R",
   "G_Worker_Robustness/01_figure_G1_alternative_control_rings_workers.R",
   "G_Worker_Robustness/02_figure_G2_alternative_treatment_radius_workers.R",
   "G_Worker_Robustness/03_figure_G3_extended_post_treatment_workers.R",
+  # --- more complex: extra covariates, custom inference, extended definitions, new modes ---
+  "C_Establishment_Robustness/03_table_C3_establishment_controls.R",
+  "C_Establishment_Robustness/04_table_C4_extended_post_treatment.R",
+  "C_Establishment_Robustness/08_table_C8_closure_alternative_definitions.R",
+  "C_Establishment_Robustness/05_table_C5_alternative_inference.R",
+  "E_Workers_Balancing/01_table_E1_workers_balancing.R",
+  "F_Exposed_Workers/01_table_F1_exposed_workers.R",
+  "F_Exposed_Workers/03_table_F3_dropping_movers_workers.R",
   "G_Worker_Robustness/04_figure_G4_dropping_movers_workers.R",
   "H_Robust_Confidence_Intervals/01_figure_H1_honestdid_sensitivity.R"
 )
 
-start_from <- Sys.getenv("RUN_APPENDIX_FROM", unset = "")
-if (nzchar(start_from)) {
-  start_index <- match(start_from, steps)
-  if (is.na(start_index)) {
-    stop(
-      "RUN_APPENDIX_FROM must exactly match one of the appendix step paths. Got: ",
-      start_from
-    )
-  }
-  steps <- steps[start_index:length(steps)]
-  log_msg("Resuming appendix run from: %s", start_from)
-}
-
 for (f in steps) {
   log_msg("--- Running Appendix/%s ---", f)
-  # Keep exhibit-specific models and temporary panels out of the global
-  # environment. This is especially important after the 999-replication
-  # bootstrap in C.5, which otherwise leaves enough objects resident to make
-  # later dplyr operations swap heavily on Windows.
-  step_env <- new.env(parent = .GlobalEnv)
-  sys.source(file.path(appendix_dir, f), envir = step_env)
-  rm(step_env)
-  invisible(gc(full = TRUE))
+  source(file.path(appendix_dir, f))
 }
 
 log_msg("run_appendix.R: all steps complete in %.1f min",

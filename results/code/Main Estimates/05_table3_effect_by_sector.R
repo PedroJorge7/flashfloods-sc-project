@@ -4,13 +4,6 @@
 # Both Panel A (aggregated) and Panel B (time-varying) reported.
 # Depends on `main_panel`.
 #
-# No census-tract trend: in these sector subsamples, most tracts are
-# entirely treated or entirely control, so a tract-specific trend is
-# identified off very few "mixed" tracts and destabilizes the estimates.
-#
-# Sector is each establishment's earliest recorded subsector code (subs_ibge),
-# held fixed across its whole panel, since subs_ibge can change over time for
-# ~10% of establishments.
 # ============================================================================
 
 log_msg("=== 05_table3_effect_by_sector.R: start ===")

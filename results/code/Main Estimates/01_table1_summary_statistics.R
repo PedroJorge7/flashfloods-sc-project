@@ -33,7 +33,6 @@ pre_data <- main_panel %>%
   filter(year == 2007, !is.na(treat_B)) %>%
   dplyr::left_join(sector_earliest, by = "id_estab") %>%
   mutate(
-    massa_salarial_th = massa_salarial / 1000,
     Agriculture     = as.integer(subs_ibge_fixed == 25),
     Construction    = as.integer(subs_ibge_fixed == 15),
     Manufacturing   = as.integer(dplyr::between(subs_ibge_fixed, 3, 13)),
@@ -42,11 +41,11 @@ pre_data <- main_panel %>%
     reloc_tract     = reloc_tract_tminus1
   )
 
-main_vars   <- c("morte", "reloc_tract", "empregados", "massa_salarial_th")
+main_vars   <- c("morte", "reloc_tract", "empregados")
 sector_vars <- c("Agriculture", "Construction", "Manufacturing", "RetailWholesale", "OtherServices")
 var_labels <- c(
   morte = "Establishment Closure", reloc_tract = "Establishment Relocation",
-  empregados = "Number of Employees", massa_salarial_th = "Payroll Value (thousand, in BRL)",
+  empregados = "Number of Employees",
   Agriculture = "Agriculture", Construction = "Construction", Manufacturing = "Manufacturing",
   RetailWholesale = "Retail and Wholesale", OtherServices = "Other Services"
 )
@@ -80,7 +79,7 @@ lines <- c(
   sprintf("    N. Observations & %s & & %s & & \\\\", n_treated, n_control),
   "    \\bottomrule", "    \\end{tabular}%",
   "    \\begin{tablenotes}[flushleft]",
-  "    \\item \\small Note: The table displays the mean and standard deviation (S.D.) in the pre-disaster year for establishments separated by treated and control assignment. The last column presents the differences in means between the treatment and control groups and indicates their statistical significance according to a t-test. *** represents $p < 0.01$,** represents $p < 0.05$,* represents $p < 0.1$. On average in 2008, 1.00 USD corresponds to 1.64 BRL.",
+  "    \\item \\small Note: The table displays the mean and standard deviation (S.D.) in the pre-disaster year for establishments separated by treated and control assignment. The last column presents the differences in means between the treatment and control groups and indicates their statistical significance according to a t-test. *** represents $p < 0.01$,** represents $p < 0.05$,* represents $p < 0.1$.,
   "    \\end{tablenotes}", "  \\end{threeparttable}", "\\end{table}%"
 )
 

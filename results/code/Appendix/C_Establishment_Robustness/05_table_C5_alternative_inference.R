@@ -1,21 +1,10 @@
 # ============================================================================
-# Appendix C, Table C.5 — Establishment-Level Estimates Using Alternative
-# Inference Procedures
+# Appendix C, Table C.5 — Establishment-Level
+# Estimates Using Alternative Inference Procedures
 # Treatment: 0-5 km vs. 50-80 km control. Full specification (establishment
 # FE, year FE, census-tract trend) throughout. Compares Conley spatial SEs
 # (10/20 km) and a wild cluster bootstrap (Rademacher weights, clustered at
-# census tract) against each other. Column layout mirrors the main-results
-# table style: 3 inference methods x 2 outcomes (Closure, Relocation).
-# Needs its own data source (firm_coordinates.dta, for Lat/Lon), read
-# separately from `raw_data`. firm_coordinates.dta's own census-tract
-# assignment differs slightly from the main panel's (fewer clusters: ~2,719
-# vs. ~2,911), which is enough to move the Relocation point estimate (a
-# variable built entirely from tract-to-tract changes) away from the
-# main-text number even though Closure is unaffected. To keep this table's
-# Relocation column consistent with the main results, its point estimate is
-# taken from `main_panel` when available; only the standard errors come from
-# the coordinates panel.
-# ============================================================================
+# census tract) against each other.# ============================================================================
 
 log_msg("=== 05_table_C5_alternative_inference.R: start ===")
 
@@ -24,7 +13,6 @@ if (!file.exists(coord_path)) {
   log_msg("SKIPPED Table C.5: firm_coordinates.dta not found at %s", coord_path)
 } else {
 
-  # fixest::conley() needs lowercase "lat"/"lon" columns.
   coord_data <- haven::read_dta(coord_path) %>%
     mutate(lat = Lat, lon = Lon) %>%
     filter(year >= 2003 & year <= 2012) %>%
@@ -33,7 +21,7 @@ if (!file.exists(coord_path)) {
 
   treated_rule_5km <- function(d) d <= 5
   panel <- build_or_load_panel(
-    file.path(cache_dir, "B05_panel_alt_inference.rds"),
+    file.path(cache_dir, "C5_panel_alt_inference.rds"),
     function() build_establishment_panel(coord_data, treated_rule_5km, "C.5 (0-5 km, with coordinates)")
   )
 
@@ -44,13 +32,6 @@ if (!file.exists(coord_path)) {
   fml_evt <- function(outcome) as.formula(paste0(outcome, " ~ ", paste0("treat_B_", tv_years, collapse = " + "),
                                                   " | id_estab + year + treat_trend_f[code_tract_num]"))
 
-  # --------------------------------------------------------------------------
-  # Wild cluster bootstrap (Rademacher weights, unrestricted residuals):
-  # residualize the fitted model once, then for each replication multiply
-  # each census tract's residuals by a random +-1 weight, rebuild the outcome,
-  # and refit. The bootstrap SE is the standard deviation of the resulting
-  # coefficient distribution; significance uses a normal approximation.
-  # --------------------------------------------------------------------------
   wild_bootstrap_se <- function(fml, data, resp_var, terms, B = 999, ncores = 6, seed = 20260727) {
     m0 <- feols(fml, data = data, lean = FALSE, notes = FALSE)
     used_idx <- if (is.null(m0$obs_selection)) seq_len(nrow(data)) else setdiff(seq_len(nrow(data)), -m0$obs_selection$obsRemoved)
@@ -89,10 +70,6 @@ if (!file.exists(coord_path)) {
     apply(boot_mat, 1, function(x) sd(x, na.rm = TRUE))
   }
 
-  # --------------------------------------------------------------------------
-  # Point estimate for the Relocation outcome from the main panel (same data
-  # as Table 3), used to override the coordinates-panel point estimate below.
-  # --------------------------------------------------------------------------
   get_main_point_estimates <- function(outcome) {
     mp <- get("main_panel", envir = .GlobalEnv)
     fmlA <- fml_agg(outcome); fmlE <- fml_evt(outcome)
@@ -104,14 +81,6 @@ if (!file.exists(coord_path)) {
   main_panel_ok <- exists("main_panel", envir = .GlobalEnv) && is.data.frame(get("main_panel", envir = .GlobalEnv))
   if (!main_panel_ok) log_msg("WARNING: main_panel not in scope; Relocation point estimate will come from the coordinates panel instead (may not match the main text).")
 
-  # --------------------------------------------------------------------------
-  # Fit all methods for one outcome: 2 deterministic (Conley 10/20 km, cheap
-  # to refit) + 1 wild bootstrap (expensive, run once per aggregated /
-  # time-varying model). `point_override`, when supplied, replaces the
-  # coordinates-panel point estimate (used for Relocation); significance is
-  # then recomputed for every method from that point estimate and each
-  # method's own SE, via a normal approximation.
-  # --------------------------------------------------------------------------
   method_names <- c("Conley 10km", "Conley 20km", "Wild Bootstrap")
 
   fit_outcome <- function(outcome, point_override = NULL) {
@@ -165,15 +134,11 @@ if (!file.exists(coord_path)) {
          nclust = dplyr::n_distinct(panel$code_tract_num[!is.na(panel$treat_B)]))
   }
 
-  res_closure <- fit_outcome("morte")
+  closure_override <- if (main_panel_ok) get_main_point_estimates("morte") else NULL
+  res_closure <- fit_outcome("morte", point_override = closure_override)
   reloc_override <- if (main_panel_ok) get_main_point_estimates("reloc_tract_tminus1") else NULL
   res_reloc   <- fit_outcome("reloc_tract_tminus1", point_override = reloc_override)
 
-  # --------------------------------------------------------------------------
-  # Assemble LaTeX table: main-results style. 6 columns = 3 inference methods
-  # x 2 outcomes (Closure, Relocation); Panel A = time-aggregated DiD,
-  # Panel B = time-varying DiD.
-  # --------------------------------------------------------------------------
   col_outcome <- rep(c("Closure", "Relocation"), each = length(method_names))
   col_method  <- rep(method_names, times = 2)
   res_by_col  <- rep(list(res_closure, res_reloc), each = length(method_names))

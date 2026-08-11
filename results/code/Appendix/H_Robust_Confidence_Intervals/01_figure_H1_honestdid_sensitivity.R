@@ -1,16 +1,19 @@
 # ============================================================================
-# Figure H.1 — Sensitivity Analysis of the HonestDiD Approach
+# [New_Results, CORRECTED] Figure H.1 — Sensitivity Analysis of the
+# HonestDiD Approach
 # (Rambachan & Roth, 2023, relative-magnitudes bound). Tests how robust the
 # average post-treatment effect is to violations of parallel trends, for
 # (a) establishment closure and (b) worker employment. Treatment: 0-5 km vs.
 # 50-80 km control throughout; clustering: census tract. Two panel images
 # (closure, employment).
 #
-# Closure: refits the event-study model directly on `main_panel`.
-# Employment: replicates the worker PSM + panel-construction pipeline
-# independently (0-5km/50-80km, with census-tract trend, cluster on
-# code_tract) to get a raw fixest object with a full covariance matrix, since
-# output_empregados() itself only returns tidied point estimates/SEs.
+# Closure: refits the event-study model directly on `main_panel` (corrected,
+# full-life panel).
+#
+# Employment: replicates the CORRECTED worker PSM + panel-construction
+# pipeline (fixed 2007 baseline treat_B, no mover-year outcome nulling)
+# independently, to get a raw fixest object with a full covariance matrix,
+# since output_empregados() itself only returns tidied point estimates/SEs.
 # Depends on `main_panel` (establishment) and `dados_main` + WORKER_MIN_TREAT
 # etc. (worker) already being in scope.
 # ============================================================================
@@ -19,23 +22,20 @@ library(HonestDiD)
 
 log_msg("=== 01_figure_H1_honestdid_sensitivity.R: start ===")
 
-# This exhibit needs both the establishment panel (main_panel) and the
-# worker panel (dados_main). If run standalone (outside run_appendix.R,
-# which loads both), load the worker prerequisites here.
 if (!exists("dados_main", envir = .GlobalEnv)) {
   log_msg("dados_main not in scope; loading worker data...")
   library(MatchIt)
   source(file.path(script_dir, "utils", "worker_functions.R"))
-  worker_path_g1 <- data_path("workers_clean_data.rds")
-  dados_raw_g1 <- readRDS(worker_path_g1)
-  dados_g1 <- dados_raw_g1 %>% filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE)
-  dados_main             <<- dados_g1 %>% filter(between(year, 2002, 2012))
+  worker_path_h1 <- data_path("workers_clean_data.rds")
+  dados_raw_h1 <- readRDS(worker_path_h1)
+  dados_h1 <- dados_raw_h1 %>% filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE)
+  dados_main             <<- dados_h1 %>% filter(between(year, 2002, 2012))
   WORKER_MIN_TREAT       <<- 0
   WORKER_MAX_TREAT       <<- 5
   WORKER_MIN_CTRL        <<- 50
   WORKER_MAX_CTRL        <<- 80
   WORKER_CLUSTER_FORMULA <<- ~code_tract
-  rm(dados_raw_g1, dados_g1)
+  rm(dados_raw_h1, dados_h1)
 }
 
 year_from_term <- function(nm) as.numeric(gsub(".*?(\\d{4}).*", "\\1", nm))
@@ -69,10 +69,11 @@ make_honest_plot <- function(beta, sigma, numPrePeriods, numPostPeriods, context
 }
 
 # --------------------------------------------------------------------------
-# (a) Establishment Closure
+# (a) Establishment Closure -- pure consumer of the corrected main_panel /
+# fit_establishment_models(), no changes needed here.
 # --------------------------------------------------------------------------
-res_g1_closure <- fit_establishment_models(main_panel, "morte", context = "G.1 / Closure")
-m_close <- res_g1_closure$event
+res_h1_closure <- fit_establishment_models(main_panel, "morte", context = "H.1 / Closure")
+m_close <- res_h1_closure$event
 
 terms_close <- names(coef(m_close))
 years_close <- year_from_term(terms_close)
@@ -89,13 +90,15 @@ log_msg("Closure event-study: %d pre-periods (%s), %d post-periods (%s)",
 
 honest_closure <- make_honest_plot(beta_close, sigma_close, numPre_close, numPost_close, "Closure")
 
-out_path_a <- file.path(figures_dir, "Fig_G01a_HonestDID_Closure_5km_tract.png")
+out_path_a <- file.path(figures_dir, "Fig_H01a_HonestDID_Closure_5km_tract.png")
 ggsave(filename = out_path_a, plot = honest_closure$plot, dpi = 300, width = 7, height = 7, units = "in")
 log_msg("Saved figure: %s", out_path_a)
 
 # --------------------------------------------------------------------------
-# (b) Worker Employment -- replicate output_empregados()'s PSM + panel
-# pipeline independently (trend = TRUE, matching output_trend).
+# (b) Worker Employment -- replicates the CORRECTED output_empregados() PSM +
+# panel pipeline (fixed 2007 baseline treat_B, no mover-year outcome
+# nulling), inline, since we need the raw fixest object with a full
+# covariance matrix (output_empregados() only returns tidied estimates).
 # --------------------------------------------------------------------------
 w2 <- dados_main %>% dplyr::filter(year == 2007)
 w3 <- w2 %>%
@@ -128,7 +131,7 @@ w4 <- w3 %>%
     trabalhador_outros     = ifelse(tipo_sintetizado %in% c("Outros", "Trabalho Avulso"), 1, 0)
   )
 
-psm_g1 <- MatchIt::matchit(
+psm_h1 <- MatchIt::matchit(
   treat ~ idade + rem_med_r + temp_empr + tamestab,
   method = "nearest",
   exact  = c("educ_d1", "educ_d2", "educ_d3", "educ_d4", "male",
@@ -137,38 +140,36 @@ psm_g1 <- MatchIt::matchit(
   replace = FALSE,
   data    = w4
 )
-m_data_g1 <- MatchIt::match.data(psm_g1)
-w2m <- merge(dados_main, m_data_g1[, c("cpf", "weights")], by = "cpf")
+m_data_h1 <- MatchIt::match.data(psm_h1)
+# Carry `treat` (baseline classification) forward too, not just `weights` --
+# this is what fixes treatment to each worker's 2007 job for the rest of
+# their panel below.
+baseline_h1 <- m_data_h1[, c("cpf", "weights", "treat")]
+names(baseline_h1)[names(baseline_h1) == "treat"] <- "treat_base"
+w2m <- merge(dados_main, baseline_h1, by = "cpf")
 
 w3b <- expand.grid(dplyr::distinct(w2m, cpf)$cpf, 2002:max(dados_main$year))
 names(w3b) <- c("cpf", "year")
 
-w4b <- dplyr::left_join(w3b, w2m) %>%
+w4b <- dplyr::left_join(w3b, w2m, by = c("cpf", "year")) %>%
   dplyr::arrange(cpf, year) %>%
   dplyr::mutate(ano_nascimento = year - idade, code_tract = as.numeric(code_tract)) %>%
   dplyr::group_by(cpf) %>%
   tidyr::fill(codemun, id_estab, code_tract, pis, min_ano, genero,
-              ano_nascimento, grau_instr, .direction = "downup") %>%
+              ano_nascimento, grau_instr, treat_base, weights, .direction = "downup") %>%
   dplyr::group_by(id_estab) %>%
   tidyr::fill(ano_morte, dist_flood, code_tract, .direction = "downup") %>%
   dplyr::group_by(cpf) %>%
   dplyr::mutate(
     idade         = ifelse(is.na(idade), year - ano_nascimento, idade),
-    mover_ano_mun = ifelse(dplyr::lag(codemun, 1) != codemun, 1, 0),
+    # Pure RAIS-presence indicator, not nulled based on distance to the flood
+    # spots -- tracks employment anywhere, including outside Santa Catarina.
     empregado     = ifelse(is.na(as.numeric(emp_31dez)), 0, 1)
   ) %>%
   dplyr::filter(year >= 2003 & year <= max(dados_main$year), year >= min_ano) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(
-    treat_B = ifelse(dplyr::between(dist_flood, WORKER_MIN_TREAT, WORKER_MAX_TREAT), 1,
-              ifelse(dplyr::between(dist_flood, WORKER_MIN_CTRL, WORKER_MAX_CTRL), 0, NA)),
-    empregado = ifelse(is.na(treat_B), NA, empregado)
-  ) %>%
-  dplyr::arrange(cpf, year) %>%
-  dplyr::group_by(cpf) %>%
-  dplyr::mutate(treat_B = ifelse(is.na(treat_B) & dplyr::lag(treat_B, default = NA) == 1, 1, treat_B)) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(
+    treat_B    = treat_base,  # fixed baseline, not recomputed from that year's dist_flood
     code_tract = ifelse(is.na(code_tract), codemun, code_tract),
     code_tract = as.numeric(code_tract),
     pre_pos    = ifelse(year > 2008, 1, 0),
@@ -195,16 +196,8 @@ log_msg("Employment event-study: %d pre-periods (%s), %d post-periods (%s)",
 
 honest_emp <- make_honest_plot(beta_emp, sigma_emp, numPre_emp, numPost_emp, "Employment")
 
-out_path_b <- file.path(figures_dir, "Fig_G01b_HonestDID_Employment_5km_tract.png")
+out_path_b <- file.path(figures_dir, "Fig_H01b_HonestDID_Employment_5km_tract.png")
 ggsave(filename = out_path_b, plot = honest_emp$plot, dpi = 300, width = 7, height = 7, units = "in")
 log_msg("Saved figure: %s", out_path_b)
-
-# --------------------------------------------------------------------------
-# Remove superseded single-figure output/CSV from the old hand-rolled bound.
-# --------------------------------------------------------------------------
-for (f in c(file.path(figures_dir, "Fig_G01_Honest_DID_Results_5km_tract.png"),
-            file.path(tables_dir,  "Fig_G01_Honest_DID_Bounds_5km_tract.csv"))) {
-  if (file.exists(f)) { file.remove(f); log_msg("Removed superseded output: %s", f) }
-}
 
 log_msg("=== 01_figure_H1_honestdid_sensitivity.R: done ===")

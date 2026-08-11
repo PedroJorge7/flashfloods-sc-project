@@ -1,5 +1,6 @@
 # ============================================================================
-# Appendix F, Table F.1 — The Effect of the Flash Floods on Exposed Workers
+# Appendix F, Table F.1 — The Effect of the Flash
+# Floods on Exposed Workers
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
 # `exposed_workers = TRUE` uses the full treated-area worker universe, not
 # just workers dismissed in 2008. Employment outcome only. Four columns:
@@ -7,7 +8,9 @@
 #   (2) All workers, with census-tract trend
 #   (3) High Skill workers, with trend (grau_instr >= 8 in 2007)
 #   (4) Low Skill workers, with trend (grau_instr < 8 in 2007)
-# Uses `dados_main` (2002-2012) from 00b_load_worker_data.R.
+# Uses `dados_main` (2002-2012) from 00b_load_worker_data.R and the
+# corrected output_empregados() (fixed 2007 baseline treatment, no
+# mover-year outcome nulling).
 # ============================================================================
 
 log_msg("=== 01_table_F1_exposed_workers.R: start ===")
@@ -45,7 +48,6 @@ output_low_trend <- output_empregados(
   exposed_workers = TRUE, trend = TRUE, se_type = "cluster", cluster_formula = WORKER_CLUSTER_FORMULA
 )
 
-# Pull a single coefficient/SE/p/nobs out of an output_empregados() result.
 get_worker_term <- function(df, regression_label, term_label) {
   row <- df %>% dplyr::filter(type == "type_treatment", Regression == regression_label, parmseq == term_label)
   if (nrow(row) == 0) return(list(estimate = NA_real_, se = NA_real_, p = NA_real_, n = NA_integer_))

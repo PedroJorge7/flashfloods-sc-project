@@ -37,7 +37,7 @@ nobsA <- sapply(col_sources, function(s) fmt_obs(s$res$nobs["agg"]))
 
 lines <- c(
   "\\begin{table}[htb]", "  \\centering",
-  "  \\tabcaption{The Effect of the Flash Floods on Establishments' Adjustment}",
+  "  \\tabcaption{The Effect of the Flash Floods on Establishments’ Adjustment}",
   "  \\label{tab3: main_results}", "  \\scalebox{0.8}{", "  \\begin{threeparttable}",
   "    \\begin{tabular}{lccccccc}", "    \\toprule",
   "          & (1)   &       & (2)   &       & (3)   &       & (4) \\\\",

@@ -1,9 +1,9 @@
 # ============================================================================
-# Appendix C, Figure C.2 — Alternative Sizes of the Treatment Radius in
-# Establishment-Level Estimates
+# Appendix C, Figure C.2 — Alternative Sizes of the
+# Treatment Radius in Establishment-Level Estimates
 # Radius ladder: 2.5, 5 (reference), 7.5, 10, 12.5, 15 km; control fixed at
 # 50-80 km. Clustering: census tract. Uses `raw_data` (each radius needs its
-# own panel build).
+# own panel build, via the corrected build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 02_figure_C2_alternative_treatment_radius.R: start ===")
@@ -25,7 +25,7 @@ for (rad_label in names(radius_specs)) {
   treated_rule <- local({ rr <- r; function(d) d <= rr })
   rad_tag <- gsub("[^A-Za-z0-9]+", "_", rad_label)
   panel <- build_or_load_panel(
-    file.path(cache_dir, sprintf("B2_panel_%s.rds", rad_tag)),
+    file.path(cache_dir, sprintf("C2_panel_%s.rds", rad_tag)),
     function() build_establishment_panel(raw_data, treated_rule, sprintf("C.2 radius=%s", rad_label))
   )
   for (outcome in names(outcomes)) {
@@ -45,7 +45,6 @@ for (rad_label in names(radius_specs)) {
     }
     rm(res)
   }
-  # Free this radius's panel before building the next one.
   rm(panel)
   gc(full = TRUE)
 }
@@ -73,7 +72,7 @@ pA <- make_panel(filter(all_results, Outcome == "Closure"), "A - Establishment C
 pB <- make_panel(filter(all_results, Outcome == "Relocation"), "B - Establishment Relocation (0/1)")
 fig <- ggpubr::ggarrange(pA, pB, ncol = 2, common.legend = TRUE, legend = "bottom")
 
-out_path <- file.path(figures_dir, "change_treatment.png")
+out_path <- file.path(figures_dir, "Fig_C02_Alternative_Treatment_Radius_5km_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 12, height = 6, units = "in")
 log_msg("Saved figure: %s", out_path)
 

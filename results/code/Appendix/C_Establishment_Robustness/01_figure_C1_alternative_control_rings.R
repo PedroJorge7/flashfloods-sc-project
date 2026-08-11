@@ -1,9 +1,11 @@
 # ============================================================================
-# Appendix C, Figure C.1 — Alternative Sizes of the Control Rings in
-# Establishment-Level Estimates
+# Appendix C, Figure C.1 — Alternative Sizes of the
+# Control Rings in Establishment-Level Estimates
 # Treatment fixed at 0-5 km; control ring varies (40-70, 30-80, 50-100 km,
 # plus 50-80 km as reference). Clustering: census tract. Uses `raw_data`
-# (each ring needs its own panel build).
+# (each ring needs its own panel build, via the corrected
+# build_establishment_panel() -- fixed baseline treatment, no mover-year
+# outcome nulling).
 # ============================================================================
 
 log_msg("=== 01_figure_C1_alternative_control_rings.R: start ===")
@@ -22,7 +24,7 @@ all_results <- data.frame()
 for (ring_label in names(control_specs)) {
   ring_tag <- gsub("[^A-Za-z0-9]+", "_", ring_label)
   panel <- build_or_load_panel(
-    file.path(cache_dir, sprintf("B1_panel_%s.rds", ring_tag)),
+    file.path(cache_dir, sprintf("C1_panel_%s.rds", ring_tag)),
     function() build_establishment_panel(raw_data, treated_rule_5km, sprintf("C.1 ring=%s", ring_label),
                                           control_rule = control_specs[[ring_label]])
   )
@@ -43,8 +45,6 @@ for (ring_label in names(control_specs)) {
     }
     rm(res)
   }
-  # Free this ring's panel before building the next one to avoid memory
-  # buildup across loop iterations.
   rm(panel)
   gc(full = TRUE)
 }
@@ -71,7 +71,7 @@ pA <- make_panel(filter(all_results, Outcome == "Closure"), "A - Establishment C
 pB <- make_panel(filter(all_results, Outcome == "Relocation"), "B - Establishment Relocation (0/1)")
 fig <- ggpubr::ggarrange(pA, pB, ncol = 2, common.legend = TRUE, legend = "bottom")
 
-out_path <- file.path(figures_dir, "results_controles.png")
+out_path <- file.path(figures_dir, "Fig_C01_Alternative_Control_Rings_5km_tract.png")
 ggsave(filename = out_path, plot = fig, dpi = 300, width = 12, height = 6, units = "in")
 log_msg("Saved figure: %s", out_path)
 

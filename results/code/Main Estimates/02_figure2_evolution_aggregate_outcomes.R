@@ -3,9 +3,6 @@
 # Treatment: 0-5 km vs. 50-80 km control. Aggregate proportions by group-year,
 # no regression. Depends on `main_panel`, `raw_data`.
 #
-# Panel B (Relocation Rate) is computed on the full `raw_data` panel rather
-# than on main_panel's own reloc_tract_tminus1, to avoid a boundary artifact
-# at the edges of the 2003-2012 window.
 # ============================================================================
 
 log_msg("=== 02_figure2_evolution_aggregate_outcomes.R: start ===")
@@ -33,15 +30,15 @@ base_agregado <- main_panel_fig2 %>%
   summarise(
     new_firm = sum(new_firm, na.rm = TRUE), firm = sum(firm, na.rm = TRUE),
     morte = sum(morte, na.rm = TRUE), reloc_tract_tminus1 = sum(reloc_tract_tminus1, na.rm = TRUE),
-    empregados = sum(empregados, na.rm = TRUE), massa_salarial = sum(massa_salarial, na.rm = TRUE),
+    empregados = sum(empregados, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   filter(between(year, 2003, 2012)) %>%
   mutate(
     morte = (morte / firm) * 100, reloc_tract_tminus1 = (reloc_tract_tminus1 / firm) * 100,
-    empregados = empregados / firm, massa_salarial = massa_salarial / firm
+    empregados = empregados / firm
   ) %>%
-  pivot_longer(cols = c(morte, reloc_tract_tminus1, empregados, massa_salarial),
+  pivot_longer(cols = c(morte, reloc_tract_tminus1, empregados),
                names_to = "variable", values_to = "valor") %>%
   mutate(
     treat = case_when(treat_B == 1 ~ "Treat", treat_B == 0 ~ "Control", TRUE ~ "Others"),
@@ -49,7 +46,6 @@ base_agregado <- main_panel_fig2 %>%
       variable == "morte" ~ "A - Closure Rate (%)",
       variable == "reloc_tract_tminus1" ~ "B - Relocation Rate (%)",
       variable == "empregados" ~ "C - Mean number of Employees",
-      variable == "massa_salarial" ~ "D - Mean Payroll (in BRL)",
       TRUE ~ NA_character_
     )
   ) %>%
@@ -57,7 +53,7 @@ base_agregado <- main_panel_fig2 %>%
   arrange(variable, treat, year)
 
 vars_ordem <- c("A - Closure Rate (%)", "B - Relocation Rate (%)",
-                "C - Mean number of Employees", "D - Mean Payroll (in BRL)")
+                "C - Mean number of Employees")
 
 panels_missing <- setdiff(vars_ordem, unique(base_agregado$variable))
 if (length(panels_missing) > 0) stop("Panels with no data: ", paste(panels_missing, collapse = " | "))
@@ -79,8 +75,8 @@ create_plot <- function(df, var_name) {
 plots <- lapply(vars_ordem, function(v) create_plot(base_agregado, v))
 combined_plot <- ggpubr::ggarrange(plotlist = plots, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
 
-out_path <- file.path(figures_dir, "graph_descritivo.png")
-ggsave(filename = out_path, plot = combined_plot, dpi = 300, width = 14, height = 9, units = "in")
+out_path <- file.path(figures_dir, "Fig_02_Evolution_Aggregate_Outcomes_5km.png")
+ggsave(filename = out_path, plot = combined_plot, dpi = 300, width = 12, height = 9, units = "in")
 log_msg("Saved figure: %s", out_path)
 
 log_msg("=== 02_figure2_evolution_aggregate_outcomes.R: done ===")

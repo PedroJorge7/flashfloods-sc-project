@@ -10,7 +10,7 @@ log_msg("=== 04_figure4_event_study_establishments.R: start ===")
 
 emit_closure_relocation_event_study(
   res_closure, res_reloc,
-  out_path = file.path(figures_dir, "event_study.png")
+  out_path = file.path(figures_dir, "Fig_04_EventStudy_Establishments_5km_tract.png")
 )
 
 log_msg("=== 04_figure4_event_study_establishments.R: done ===")
