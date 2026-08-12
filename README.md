@@ -8,73 +8,13 @@ The paper combines restricted employer-employee records from the Relação Anual
 
 ## From the national RAIS data to the analytical samples
 
-The data construction was performed in a secure environment. The construction scripts do not form part of the public replication package. The public code begins with the restricted analytical establishment and worker files produced by the procedure described below.
+The public code begins with restricted analytical files constructed from the national RAIS employer-employee records for 2002--2016. Construction took place in a secure environment and used complete CNPJ and CPF identifiers to follow establishments and workers anywhere in Brazil. The underlying microdata, identifiers, geocoded records, and construction scripts are not distributed.
 
-### 1. National RAIS data
+Baseline establishments in Santa Catarina were geocoded using complete addresses and postal codes. Imprecise matches and establishments without a valid 2007 geocode were excluded. Exposure is the minimum distance from the establishment's 2007 location to the nearest polygon in the 2008 flood map supplied by Marinho et al. (2012). Treated establishments are located 0--5 km from a mapped flood spot; controls are located 50--80 km away. Treatment status remains fixed after relocation.
 
-RAIS is the official Brazilian matched employer-employee database and covers the entire formal labor market. The restricted national data received for this project cover 2002 through 2016. This period includes the years required for both the main analyses and their temporal extensions. The main analyses subsequently restrict the panel to 2003 through 2012, while extended specifications follow establishments and workers through 2016.
+The establishment panel follows the baseline establishments through CNPJ. The main period is 2003--2012, with extensions through 2016. Closure is recorded in an establishment's last year in RAIS, and relocation indicates a change in census tract between consecutive years. The restricted input is `Natural Disastrer Santa Catarina - Dataset.dta`.
 
-The data received by the authors had already been standardized across years. The provider had harmonized the annual layouts and the relevant variable formats before delivery. The project therefore did not construct an additional year-by-year layout crosswalk from the original annual RAIS files.
-
-The received data contain establishment, employment relationship, worker, address, geographic, industry, earnings, working-hours, tenure, education, gender, establishment-size, and employment-status information.
-
-### 2. Longitudinal identification
-
-Establishments are identified by their complete CNPJ through the variable `id_estab`. Workers are identified directly by CPF through the variable `cpf`. These identifiers allow establishments and workers to be linked across years and followed anywhere in Brazil.
-
-The identifiers in the restricted analytical files are not anonymized. This is a central reason why neither the received RAIS data nor the derived establishment and worker files can be distributed. No CNPJ, CPF, address, coordinate, or individual record is included in the public repository or its generated outputs.
-
-### 3. Geocoding establishment locations
-
-The project used the Google Maps API to geocode establishments in Santa Catarina. We tested geocoding queries based on postal codes and on complete establishment addresses. The returned locations were validated to retain sufficiently precise establishment locations. Low-precision matches corresponding to municipal centroids or broad postal areas were discarded.
-
-The procedure could not accurately geocode 20.5 percent of the initial establishments because their postal codes or addresses were misspelled, incomplete, or referred to broad geographic areas. These establishments were excluded from the analytical sample. Establishments without a valid geocode for the 2007 baseline were also excluded rather than assigned a location from another year.
-
-High-quality geocoding was undertaken for establishments initially located in Santa Catarina. After the baseline sample was defined, the national coverage of RAIS and the CNPJ and CPF identifiers allowed establishments and workers to be followed even when they subsequently moved outside Santa Catarina.
-
-### 4. Mapping the 2008 flood
-
-The flood layer was made available by Marinho and is documented in Marinho et al. (2012). It combines flood classifications derived from TerraSAR-X, RADARSAT-2 ascending and descending passes, and ENVISAT ASAR imagery collected between September 2008 and January 2009.
-
-Marinho et al. (2012) processed the SAR imagery through orthorectification, speckle-noise filtering, and conversion to the backscatter coefficient. This procedure identified 1,022 individual flood spots representing the location and spatial extent of inundation during the 2008 disaster. The authors received and used the resulting polygon layer. The source layer and its derived treatment geometry are third-party data and are not distributed with this repository.
-
-### 5. Calculating exposure to flooding
-
-For each establishment with a valid baseline location, the construction calculates the minimum distance from the establishment point to the boundary of the nearest flood polygon. Establishments located inside a mapped flood polygon receive a distance of zero. The resulting variable, `dist_flood`, is stored in kilometers.
-
-The treatment group contains establishments located from 0 through 5 km from the mapped flood spots. The baseline control group contains establishments located from 50 through 80 km from the flood spots. Establishments in the intermediate area between 5 and 50 km and establishments beyond 80 km do not enter the baseline comparison.
-
-Treatment status is fixed using the establishment's valid pre-disaster location in 2007. A later relocation does not change whether an establishment belongs to the treatment or control group.
-
-### 6. Establishment sample and panel
-
-The construction excludes establishments without employment relationships and establishments with zero employment. It does not exclude establishments based on public-sector status, agriculture, or CNAE activity. No sector-specific restriction is applied when the main establishment sample is constructed.
-
-After the baseline geographic sample is selected, the complete CNPJ is used to recover the same establishments from the national RAIS data in every year. Establishments continue to be observed after relocation, including when their later locations fall outside Santa Catarina or outside the original treatment and control bands.
-
-The main establishment panel covers 2003 through 2012. Extended specifications use observations through 2016. The restricted establishment input expected by the replication code is:
-
-- `Natural Disastrer Santa Catarina - Dataset.dta`
-
-The estimation code uses this file to create fixed treatment indicators, year-specific treatment interactions, post-treatment indicators, census-tract trends, and the relocation outcome.
-
-An establishment is classified as closed in year (t) when it is present in the national RAIS registry in year (t) but absent in year (t+1). The outcome is therefore indexed by the establishment's last year in RAIS. This definition does not identify a closure when an establishment closes one CNPJ and continues its activities under a new CNPJ.
-
-Relocation equals one in year (t) when the establishment is observed in a different census tract in year (t+1) relative to year (t). Because establishments are followed nationally through CNPJ, this measure also captures moves outside Santa Catarina.
-
-### 7. Worker sample and panel
-
-The worker sample consists of workers with a formal employment relationship in 2007 at establishments selected at baseline. The 2007 restriction is required because the covariates used for propensity-score matching are measured in that year. CPF is then used to recover each selected worker's subsequent formal employment history in the national RAIS. Workers remain under observation when they obtain formal employment at another establishment or outside Santa Catarina.
-
-The main worker analysis focuses on workers formally employed on December 31, 2008, by establishments located in the treatment area that were present in the 2008 RAIS and absent from the 2009 RAIS. The control group contains observationally similar workers associated with establishments in the control area and is selected through nearest-neighbor propensity-score matching without replacement.
-
-The restricted worker input expected by the replication code is:
-
-- `workers_clean_data.rds`
-
-The public code constructs the worker-year panel, fixes treatment from the baseline employment relationship, performs propensity-score matching, and creates the employment and treatment variables used in estimation.
-
-The main worker outcome equals one when the worker has a formal employment relationship active on December 31 of year (t), and zero otherwise. A zero does not distinguish unemployment from informal employment because RAIS covers only formal employment.
+The worker sample consists of workers formally employed in 2007 at baseline establishments. This restriction is required because the propensity-score covariates are measured in 2007. Workers are subsequently followed through CPF in the national RAIS, including at other establishments and outside Santa Catarina. The restricted input is `workers_clean_data.rds`. The outcome identifies formal employment on December 31; a zero may represent either unemployment or informal employment.
 
 ## Repository structure
 
@@ -103,6 +43,38 @@ flashfloods-sc-project/
 `results/code/utils/` contains shared functions for path handling, panel preparation, estimation, and output formatting.
 
 `results/analysis/` receives generated tables and figures.
+
+## Results and replication scripts
+
+### Main results
+
+| Result | Script |
+|---|---|
+| Figure 1 — Geographical distribution of the affected area | `results/code/Main Estimates/01_figure1_geographical_distribution_affected_area.R` |
+| Table 1 — Summary statistics for 2007 | `results/code/Main Estimates/01_table1_summary_statistics.R` |
+| Figure 2 — Evolution of aggregate outcomes | `results/code/Main Estimates/02_figure2_evolution_aggregate_outcomes.R` |
+| Table 2 — Establishment adjustment | `results/code/Main Estimates/03_table2_establishment_adjustment.R` |
+| Figure 4 — Event study of establishment adjustment | `results/code/Main Estimates/04_figure4_event_study_establishments.R` |
+| Table 3 — Closure by sector | `results/code/Main Estimates/05_table3_effect_by_sector.R` |
+| Table 4 — Closure by business size | `results/code/Main Estimates/06_table4_effect_by_business_size.R` |
+| Table 5 — Hazard of establishment closure | `results/code/Main Estimates/07_table5_hazard_establishment_closure.R` |
+| Table 6 — Dismissed workers | `results/code/Main Estimates/08_table6_dismissed_workers.R` |
+| Figure 5 — Event study of dismissed workers | `results/code/Main Estimates/09_figure5_event_study_workers.R` |
+| Figure 5, skill groups | `results/code/Main Estimates/10_figure5b_event_study_workers_by_skill.R` |
+
+### Appendix results
+
+| Result | Script |
+|---|---|
+| Table A.1 — Municipal balance | `results/code/Appendix/A_Municipal_Balance/01_table_A1_municipal_balance.R` |
+| Table B.1 — Distance-band analysis | `results/code/Appendix/B_Distance_Band_Analysis/01_table_B1_distance_band_analysis.R` |
+| Table B.3 — Dropping establishments that moved | `results/code/Appendix/B_Distance_Band_Analysis/03_table_B3_business_sorting.R` |
+| Figures C.1--C.2 — Alternative control and treatment rings | `results/code/Appendix/C_Establishment_Robustness/` |
+| Tables C.3--C.8 and Figure C.9 — Establishment robustness | `results/code/Appendix/C_Establishment_Robustness/` |
+| Table E.1 — Worker balancing | `results/code/Appendix/E_Workers_Balancing/01_table_E1_workers_balancing.R` |
+| Tables F.1 and F.3 — Exposed-worker estimates | `results/code/Appendix/F_Exposed_Workers/` |
+| Figures G.1--G.4 — Worker robustness | `results/code/Appendix/G_Worker_Robustness/` |
+| Figure H.1 — HonestDiD sensitivity analysis | `results/code/Appendix/H_Robust_Confidence_Intervals/01_figure_H1_honestdid_sensitivity.R` |
 
 ## Data used in the article
 
@@ -145,8 +117,6 @@ The data used in this project are not publicly available and are not distributed
 The restricted data contain complete CNPJ and CPF identifiers as well as geocoded establishment information. The authors are not authorized to redistribute the national RAIS files, establishment addresses, coordinates, identifier crosswalks, or the derived establishment and worker panels. Researchers seeking to use RAIS must obtain authorization directly from the responsible Brazilian data custodian and comply with the applicable confidentiality and secure-use procedures.
 
 The SAR imagery and derived 2008 flood polygons are also unavailable through this repository. They were produced and made available by the authors of Marinho et al. (2012). The project authors do not hold redistribution rights. Researchers seeking access should contact the original data producer. This third-party restriction is separate from the legal and contractual restrictions applying to RAIS.
-
-No direct identifier, address record, establishment coordinate, worker record, or extract of the restricted microdata may be written to public logs or replication outputs. The repository provides the estimation code and documentation required to reproduce the results after an authorized researcher has obtained and constructed the restricted analytical inputs.
 
 ## Reference
 
