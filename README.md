@@ -8,11 +8,11 @@ The paper combines restricted employer-employee records from the Relação Anual
 
 ## From the national RAIS data to the analytical samples
 
-The public code begins with restricted analytical files constructed from the national RAIS employer-employee records for 2002--2016. Construction took place in a secure environment and used complete CNPJ and CPF identifiers to follow establishments and workers anywhere in Brazil. The underlying microdata, identifiers, geocoded records, and construction scripts are not distributed.
+The public code begins with restricted analytical files constructed from the national RAIS employer-employee records for 2002 - 2016. Construction took place in a secure environment and used complete CNPJ and CPF identifiers to follow establishments and workers anywhere in Brazil. The underlying microdata, identifiers, geocoded records, and construction scripts are not distributed.
 
-Baseline establishments in Santa Catarina were geocoded using complete addresses and postal codes. Imprecise matches and establishments without a valid 2007 geocode were excluded. Exposure is the minimum distance from the establishment's 2007 location to the nearest polygon in the 2008 flood map supplied by Marinho et al. (2012). Treated establishments are located 0--5 km from a mapped flood spot; controls are located 50--80 km away. Treatment status remains fixed after relocation.
+Baseline establishments in Santa Catarina were geocoded using complete addresses and postal codes. Imprecise matches and establishments without a valid 2007 geocode were excluded. Exposure is the minimum distance from the establishment's 2007 location to the nearest polygon in the 2008 flood map supplied by Marinho et al. (2012). Treated establishments are located 0 - 5 km from a mapped flood spot; controls are located 50 - 80 km away. Treatment status remains fixed after relocation.
 
-The establishment panel follows the baseline establishments through CNPJ. The main period is 2003--2012, with extensions through 2016. Closure is recorded in an establishment's last year in RAIS, and relocation indicates a change in census tract between consecutive years. The restricted input is `Natural Disastrer Santa Catarina - Dataset.dta`.
+The establishment panel follows the baseline establishments through CNPJ. The main period is 2003 - 2012, with extensions through 2016. Closure is recorded in an establishment's last year in RAIS, and relocation indicates a change in census tract between consecutive years. The restricted input is `Natural Disastrer Santa Catarina - Dataset.dta`.
 
 The worker sample consists of workers formally employed in 2007 at baseline establishments. This restriction is required because the propensity-score covariates are measured in 2007. Workers are subsequently followed through CPF in the national RAIS, including at other establishments and outside Santa Catarina. The restricted input is `workers_clean_data.rds`. The outcome identifies formal employment on December 31; a zero may represent either unemployment or informal employment.
 
@@ -49,7 +49,7 @@ flashfloods-sc-project/
 ### Main results
 
 | Result | Script |
-|---|---|
+| - -| - -|
 | Figure 1 — Geographical distribution of the affected area | `results/code/Main Estimates/01_figure1_geographical_distribution_affected_area.R` |
 | Table 1 — Summary statistics for 2007 | `results/code/Main Estimates/01_table1_summary_statistics.R` |
 | Figure 2 — Evolution of aggregate outcomes | `results/code/Main Estimates/02_figure2_evolution_aggregate_outcomes.R` |
@@ -65,15 +65,15 @@ flashfloods-sc-project/
 ### Appendix results
 
 | Result | Script |
-|---|---|
+| - -| - -|
 | Table A.1 — Municipal balance | `results/code/Appendix/A_Municipal_Balance/01_table_A1_municipal_balance.R` |
 | Table B.1 — Distance-band analysis | `results/code/Appendix/B_Distance_Band_Analysis/01_table_B1_distance_band_analysis.R` |
 | Table B.3 — Dropping establishments that moved | `results/code/Appendix/B_Distance_Band_Analysis/03_table_B3_business_sorting.R` |
-| Figures C.1--C.2 — Alternative control and treatment rings | `results/code/Appendix/C_Establishment_Robustness/` |
-| Tables C.3--C.8 and Figure C.9 — Establishment robustness | `results/code/Appendix/C_Establishment_Robustness/` |
+| Figures C.1 - C.2 — Alternative control and treatment rings | `results/code/Appendix/C_Establishment_Robustness/` |
+| Tables C.3 - C.8 and Figure C.9 — Establishment robustness | `results/code/Appendix/C_Establishment_Robustness/` |
 | Table E.1 — Worker balancing | `results/code/Appendix/E_Workers_Balancing/01_table_E1_workers_balancing.R` |
 | Tables F.1 and F.3 — Exposed-worker estimates | `results/code/Appendix/F_Exposed_Workers/` |
-| Figures G.1--G.4 — Worker robustness | `results/code/Appendix/G_Worker_Robustness/` |
+| Figures G.1 - G.4 — Worker robustness | `results/code/Appendix/G_Worker_Robustness/` |
 | Figure H.1 — HonestDiD sensitivity analysis | `results/code/Appendix/H_Robust_Confidence_Intervals/01_figure_H1_honestdid_sensitivity.R` |
 
 ## Data used in the article
