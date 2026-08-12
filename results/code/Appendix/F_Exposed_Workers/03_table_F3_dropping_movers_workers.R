@@ -3,7 +3,7 @@
 # Across Areas
 # Treatment: 0-5 km vs. 50-80 km control. The sample excludes workers whose
 # treated/control-ring status switches across the panel. The table reports
-# employment and wage outcomes from specifications with a census-tract trend.
+# employment outcomes from specifications with a census-tract trend.
 # Uses `dados_main` (2002-2012) from 00b_load_worker_data.R.
 # ============================================================================
 
@@ -39,7 +39,7 @@ get_worker_term_f3 <- function(regression_label, term_label) {
   )
 }
 
-regressions <- c("A - Employment (1/0)", "B - Wage Value")
+regressions <- "A - Employment (1/0)"
 
 row_gap_f3 <- function(label, values) {
   paste0(label, " & ", paste(values, collapse = " & & "), " \\\\")
@@ -54,13 +54,13 @@ lines <- c(
   "  \\label{tab:F3_worker_remove_mob}",
   "  \\scalebox{0.80}{",
   "  \\begin{threeparttable}",
-  "    \\begin{tabular}{l c p{0.60cm} c}",
+  "    \\begin{tabular}{l c}",
   "    \\toprule",
-  "          & (1) & & (2) \\\\",
-  "    \\cmidrule(lr){2-2}\\cmidrule(lr){4-4}",
-  "    Dep. Var: & Employment & & Wage \\\\",
+  "          & (1) \\\\",
+  "    \\cmidrule(lr){2-2}",
+  "    Dep. Var: & Employment \\\\",
   "    \\midrule",
-  "    \\multicolumn{4}{l}{\\textbf{Panel A: Time-Aggregated DiD}}\\\\",
+  "    \\multicolumn{2}{l}{\\textbf{Panel A: Time-Aggregated DiD}}\\\\",
   row_gap_f3(
     "    Flash Flood Post",
     vapply(post, function(x) fmt_coef(x$estimate, x$p), character(1))
@@ -70,7 +70,7 @@ lines <- c(
     vapply(post, function(x) fmt_se(x$se), character(1))
   ),
   "    \\midrule",
-  "    \\multicolumn{4}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\"
+  "    \\multicolumn{2}{l}{\\textbf{Panel B: Time-Varying DiD}}\\\\"
 )
 
 for (year in 2008:2012) {
@@ -96,7 +96,7 @@ lines <- c(
     "    Observations",
     vapply(post, function(x) fmt_obs(x$n), character(1))
   ),
-  row_gap_f3("    Census Tract Trend", c("Yes", "Yes")),
+  row_gap_f3("    Census Tract Trend", "Yes"),
   "    \\bottomrule",
   "    \\end{tabular}%",
   "    \\begin{tablenotes}[flushleft]",

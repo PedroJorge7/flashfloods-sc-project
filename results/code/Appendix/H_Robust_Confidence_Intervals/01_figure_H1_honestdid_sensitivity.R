@@ -28,14 +28,13 @@ if (!exists("dados_main", envir = .GlobalEnv)) {
   source(file.path(script_dir, "utils", "worker_functions.R"))
   worker_path_h1 <- data_path("workers_clean_data.rds")
   dados_raw_h1 <- readRDS(worker_path_h1)
-  dados_h1 <- dados_raw_h1 %>% filter(emprego_06_07 == 1, mesma_empresa_06_07 == TRUE)
-  dados_main             <<- dados_h1 %>% filter(between(year, 2002, 2012))
+  dados_main             <<- dados_raw_h1 %>% filter(between(year, 2002, 2012))
   WORKER_MIN_TREAT       <<- 0
   WORKER_MAX_TREAT       <<- 5
   WORKER_MIN_CTRL        <<- 50
   WORKER_MAX_CTRL        <<- 80
   WORKER_CLUSTER_FORMULA <<- ~code_tract
-  rm(dados_raw_h1, dados_h1)
+  rm(dados_raw_h1)
 }
 
 year_from_term <- function(nm) as.numeric(gsub(".*?(\\d{4}).*", "\\1", nm))

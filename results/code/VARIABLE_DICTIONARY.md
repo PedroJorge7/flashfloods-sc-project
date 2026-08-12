@@ -53,7 +53,7 @@ Variables actually referenced by the scripts in this folder, grouped by dataset.
 | `grau_instr` | Worker education level, RAIS coding (1–11). Used both for the skill split (High Skill = `>= 8`, Low Skill = `< 8`) and to build `educ_d1`–`educ_d4` in the balancing table (Appendix E.1): `educ_d1` = grades 1–3, `educ_d2` = 4–5, `educ_d3` = 6–7, `educ_d4` = 8–11. |
 | `genero` | Worker gender code; `male` = 1 if `genero == "1"`. |
 | `idade` | Worker age. |
-| `rem_med_r`, `rem_dez_r` | Average and December wage/earnings (nominal), deflated using `indice.xlsx` to produce `rendimento_medio_real` / `rendimento_real`. |
+| `rem_med_r` | Average remuneration measured in 2007, used as a propensity-score covariate and reported in the Appendix E.1 balance table. |
 | `temp_empr` | Employment tenure. |
 | `tamestab` | Employer establishment-size bracket. |
 | `horas_contr` | Contracted weekly hours. |
@@ -68,7 +68,6 @@ Variables actually referenced by the scripts in this folder, grouped by dataset.
 | `treat_B_YYYY` | Year-specific time-varying treatment dummy, analogous to the establishment-side variable. |
 | `empregado` | Formal-employment indicator: 1 if `emp_31dez` is non-missing. This is the outcome variable in Table 6, Table F.1, and the worker-side robustness figures ("Employment (1/0)"). |
 | `mover_ano_mun` | 1 if the worker's municipality (`codemun`) changed from the prior year. Used both directly (as a robustness/migration variable) and to build `migration_geral`/`migration_interna`. |
-| `rendimento_medio_real`, `rendimento_real` | Deflated average/December earnings (real terms, base period set by `indice.xlsx`). |
 
 ### Skill split (Table 6, Table F.1)
 
