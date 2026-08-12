@@ -48,7 +48,7 @@ flashfloods-sc-project/
 ### Main results
 
 | Result | Script |
-| - -| - -|
+| :--- | :--- |
 | Figure 1 — Geographical distribution of the affected area | `results/code/Main Estimates/01_figure1_geographical_distribution_affected_area.R` |
 | Table 1 — Summary statistics for 2007 | `results/code/Main Estimates/01_table1_summary_statistics.R` |
 | Figure 2 — Evolution of aggregate outcomes | `results/code/Main Estimates/02_figure2_evolution_aggregate_outcomes.R` |
@@ -64,15 +64,15 @@ flashfloods-sc-project/
 ### Appendix results
 
 | Result | Script |
-| - -| - -|
+| :--- | :--- |
 | Table A.1 — Municipal balance | `results/code/Appendix/A_Municipal_Balance/01_table_A1_municipal_balance.R` |
 | Table B.1 — Distance-band analysis | `results/code/Appendix/B_Distance_Band_Analysis/01_table_B1_distance_band_analysis.R` |
 | Table B.3 — Dropping establishments that moved | `results/code/Appendix/B_Distance_Band_Analysis/03_table_B3_business_sorting.R` |
-| Figures C.1 - C.2 — Alternative control and treatment rings | `results/code/Appendix/C_Establishment_Robustness/` |
-| Tables C.3 - C.8 and Figure C.9 — Establishment robustness | `results/code/Appendix/C_Establishment_Robustness/` |
+| Figures C.1–C.2 — Alternative control and treatment rings | `results/code/Appendix/C_Establishment_Robustness/` |
+| Tables C.3–C.8 and Figure C.9 — Establishment robustness | `results/code/Appendix/C_Establishment_Robustness/` |
 | Table E.1 — Worker balancing | `results/code/Appendix/E_Workers_Balancing/01_table_E1_workers_balancing.R` |
 | Tables F.1 and F.3 — Exposed-worker estimates | `results/code/Appendix/F_Exposed_Workers/` |
-| Figures G.1 - G.4 — Worker robustness | `results/code/Appendix/G_Worker_Robustness/` |
+| Figures G.1–G.4 — Worker robustness | `results/code/Appendix/G_Worker_Robustness/` |
 | Figure H.1 — HonestDiD sensitivity analysis | `results/code/Appendix/H_Robust_Confidence_Intervals/01_figure_H1_honestdid_sensitivity.R` |
 
 ## Data used in the article
@@ -88,8 +88,6 @@ The principal inputs are:
 The exact filenames are part of the code interface. Restricted files must be stored locally in `data/` and must not be committed to the repository.
 
 ## Replication instructions
-
-Open `flashfloods-sc-project.Rproj`, restore the recorded package environment with `renv::restore()`, and populate `data/` with the authorized analytical inputs before executing the code. The project root is used as the working directory.
 
 `Main_analysis.Rmd` provides the documented replication entry point and permits the main results and appendix to be run separately.
 
