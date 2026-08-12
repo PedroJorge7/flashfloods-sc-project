@@ -22,7 +22,6 @@ The worker sample consists of workers formally employed in 2007 at baseline esta
 flashfloods-sc-project/
 ├── Main_analysis.Rmd
 ├── README.md
-├── flashfloods-sc-project.Rproj
 ├── data/
 └── results/
     ├── code/
