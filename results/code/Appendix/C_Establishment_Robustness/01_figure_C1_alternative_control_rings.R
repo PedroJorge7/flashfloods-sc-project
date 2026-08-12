@@ -3,7 +3,7 @@
 # Control Rings in Establishment-Level Estimates
 # Treatment fixed at 0-5 km; control ring varies (40-70, 30-80, 50-100 km,
 # plus 50-80 km as reference). Clustering: census tract. Uses `raw_data`
-# (each ring needs its own panel build, via the corrected
+# (each ring needs its own panel build via
 # build_establishment_panel() -- fixed baseline treatment, no mover-year
 # outcome nulling).
 # ============================================================================

@@ -1,8 +1,8 @@
 # ============================================================================
-# run_main_estimates.R  [CORRECTED main estimates]
+# run_main_estimates.R  [main estimates]
 #
 # Re-runs every main-text table/figure using the same scripts as
-# Main Estimates/, using the corrected utils_establishment.R and
+# Main Estimates/, using utils_establishment.R and
 # worker_functions.R: treatment status is fixed
 # from each unit's 2007 baseline (instead of being recomputed every year from
 # that year's distance to the flood spots), and outcomes are no longer

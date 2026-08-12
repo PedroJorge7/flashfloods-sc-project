@@ -3,7 +3,7 @@
 # Treatment Radius in Worker-Level Estimations
 # Radius ladder: 2.5, 5 (reference), 7.5, 10, 12.5, 15 km; control fixed at
 # 50-80 km. Clustering: census tract. Employment outcome only. Uses
-# `dados_main` (2002-2012) from 00b_load_worker_data.R and the corrected
+# `dados_main` (2002-2012) from 00b_load_worker_data.R and
 # output_empregados().
 # ============================================================================
 

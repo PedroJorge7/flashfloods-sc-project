@@ -4,7 +4,7 @@
 # Separate regressions for each 2.5 km ring from the flood spots (0-2.5,
 # 2.5-5, 5-7.5, 7.5-10, 10-12.5, 12.5-15, 15-17.5 km), control ring fixed at
 # 50-80 km, Closure outcome. Uses `raw_data` (each band needs its own panel
-# build, via the corrected build_establishment_panel()).
+# build via build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 01_table_B1_distance_band_analysis.R: start ===")

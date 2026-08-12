@@ -1,7 +1,11 @@
-# Publish only documentation and R scripts.
+# Publish documentation, R source, the RStudio project, and the renv environment.
 *
 !.gitignore
 !*/
 !*.md
 !*.Rmd
 !*.R
+!*.Rproj
+!renv.lock
+!.Rprofile
+!renv/activate.R

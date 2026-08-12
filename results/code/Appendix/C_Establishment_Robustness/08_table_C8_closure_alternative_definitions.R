@@ -2,7 +2,7 @@
 # Appendix C, Table C.8 — Robustness of
 # Establishment Closure to Alternative Definitions
 # 08_table_C8_closure_alternative_definitions.R (replicated verbatim below),
-# applied to the corrected `main_panel` .
+# applied to `main_panel`.
 #
 # Four columns, all on the Closure outcome:
 #   (1) Baseline    — closed in t if absent from RAIS in t+1 (`morte`).

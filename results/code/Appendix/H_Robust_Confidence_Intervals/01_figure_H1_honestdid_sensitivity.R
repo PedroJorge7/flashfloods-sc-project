@@ -1,5 +1,5 @@
 # ============================================================================
-# [New_Results, CORRECTED] Figure H.1 — Sensitivity Analysis of the
+# Figure H.1 — Sensitivity Analysis of the
 # HonestDiD Approach
 # (Rambachan & Roth, 2023, relative-magnitudes bound). Tests how robust the
 # average post-treatment effect is to violations of parallel trends, for
@@ -7,10 +7,9 @@
 # 50-80 km control throughout; clustering: census tract. Two panel images
 # (closure, employment).
 #
-# Closure: refits the event-study model directly on `main_panel` (corrected,
-# full-life panel).
+# Closure: refits the event-study model directly on `main_panel`.
 #
-# Employment: replicates the CORRECTED worker PSM + panel-construction
+# Employment: replicates the worker PSM + panel-construction
 # pipeline (fixed 2007 baseline treat_B, no mover-year outcome nulling)
 # independently, to get a raw fixest object with a full covariance matrix,
 # since output_empregados() itself only returns tidied point estimates/SEs.
@@ -68,7 +67,7 @@ make_honest_plot <- function(beta, sigma, numPrePeriods, numPostPeriods, context
 }
 
 # --------------------------------------------------------------------------
-# (a) Establishment Closure -- pure consumer of the corrected main_panel /
+# (a) Establishment Closure -- pure consumer of main_panel /
 # fit_establishment_models(), no changes needed here.
 # --------------------------------------------------------------------------
 res_h1_closure <- fit_establishment_models(main_panel, "morte", context = "H.1 / Closure")
@@ -94,7 +93,7 @@ ggsave(filename = out_path_a, plot = honest_closure$plot, dpi = 300, width = 7, 
 log_msg("Saved figure: %s", out_path_a)
 
 # --------------------------------------------------------------------------
-# (b) Worker Employment -- replicates the CORRECTED output_empregados() PSM +
+# (b) Worker Employment -- replicates the output_empregados() PSM +
 # panel pipeline (fixed 2007 baseline treat_B, no mover-year outcome
 # nulling), inline, since we need the raw fixest object with a full
 # covariance matrix (output_empregados() only returns tidied estimates).

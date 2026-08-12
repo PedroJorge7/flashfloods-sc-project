@@ -3,7 +3,7 @@
 # Estimates Increasing the Post-Treatment Period
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract. Sample
 # extended to 2003-2016 (vs. 2003-2012 in the main table). Depends on
-# `extended_panel` (corrected, full-life panel from
+# `extended_panel` (full-life panel from
 # 00a_load_establishment_data.R).
 # ============================================================================
 

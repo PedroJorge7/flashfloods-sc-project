@@ -90,7 +90,7 @@ The exact filenames are part of the code interface. Restricted files must be sto
 
 ## Replication instructions
 
-Open `flashfloods-sc-project.Rproj` and use the project root as the working directory. Populate `data/` with the authorized analytical inputs before executing the code.
+Open `flashfloods-sc-project.Rproj`, restore the recorded package environment with `renv::restore()`, and populate `data/` with the authorized analytical inputs before executing the code. The project root is used as the working directory.
 
 `Main_analysis.Rmd` provides the documented replication entry point and permits the main results and appendix to be run separately.
 

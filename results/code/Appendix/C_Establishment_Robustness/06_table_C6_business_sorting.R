@@ -2,7 +2,7 @@
 #  Appendix C, Table C.6 — Establishment-
 # Level Estimates Dropping Units that Moved Across Areas
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract. Depends
-# on `main_panel` (corrected, full-life panel).
+# on `main_panel`.
 # ============================================================================
 
 log_msg("=== 06_table_C6_business_sorting.R: start ===")

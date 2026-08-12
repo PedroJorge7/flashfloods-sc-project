@@ -1,13 +1,13 @@
 # ============================================================================
-# run_appendix.R  [CORRECTED appendix robustness checks]
+# run_appendix.R  [appendix robustness checks]
 #
-# Runs the appendix robustness scripts using the corrected
-# utils_establishment.R / worker_functions.R
+# Runs the appendix robustness scripts using
+# utils_establishment.R / worker_functions.R.
 # (same correction as run_main_estimates.R: fixed baseline treatment, no
 # mover-year outcome nulling).
 #
 # `steps` is built up incrementally, simplest checks first: scripts that
-# just call the corrected build_establishment_panel()/output_empregados()
+# just call build_establishment_panel()/output_empregados()
 # with different bands need no new logic and were added first; scripts that
 # need new logic in the shared utils (remove_treat_control_mob, exposed
 # workers, custom inference, etc.) are added as that logic is built out.
@@ -57,7 +57,7 @@ source(file.path(main_dir, "00b_load_worker_data.R"))
 steps <- c(
   # --- unaffected supporting exhibits retained in the complete runner ---
   "A_Municipal_Balance/01_table_A1_municipal_balance.R",
-  # --- simplest: vary distance bands only, reuse corrected panel builder / output_empregados() as-is ---
+  # --- simplest: vary distance bands only, reuse panel builder / output_empregados() as-is ---
   "B_Distance_Band_Analysis/01_table_B1_distance_band_analysis.R",
   "C_Establishment_Robustness/01_figure_C1_alternative_control_rings.R",
   "C_Establishment_Robustness/02_figure_C2_alternative_treatment_radius.R",

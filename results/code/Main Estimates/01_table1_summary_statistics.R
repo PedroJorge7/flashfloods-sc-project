@@ -79,7 +79,7 @@ lines <- c(
   sprintf("    N. Observations & %s & & %s & & \\\\", n_treated, n_control),
   "    \\bottomrule", "    \\end{tabular}%",
   "    \\begin{tablenotes}[flushleft]",
-  "    \\item \\small Note: The table displays the mean and standard deviation (S.D.) in the pre-disaster year for establishments separated by treated and control assignment. The last column presents the differences in means between the treatment and control groups and indicates their statistical significance according to a t-test. *** represents $p < 0.01$,** represents $p < 0.05$,* represents $p < 0.1$.,
+  "    \\item \\small Note: The table displays the mean and standard deviation (S.D.) in the pre-disaster year for establishments separated by treated and control assignment. The last column presents the differences in means between the treatment and control groups and indicates their statistical significance according to a t-test. *** represents $p < 0.01$, ** represents $p < 0.05$, * represents $p < 0.1$.",
   "    \\end{tablenotes}", "  \\end{threeparttable}", "\\end{table}%"
 )
 

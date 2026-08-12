@@ -5,7 +5,7 @@
 # Employment outcome only, shown as a coefficient-by-period figure (Post +
 # year-specific effects, 2008-2016). Uses the full `dados` (2002-2016, not
 # truncated to 2012 like `dados_main`) from 00b_load_worker_data.R and the
-# corrected output_empregados().
+# output_empregados().
 # ============================================================================
 
 log_msg("=== 03_figure_G3_extended_post_treatment_workers.R: start ===")

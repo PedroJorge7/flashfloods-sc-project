@@ -3,7 +3,7 @@
 # Treatment Radius in Establishment-Level Estimates
 # Radius ladder: 2.5, 5 (reference), 7.5, 10, 12.5, 15 km; control fixed at
 # 50-80 km. Clustering: census tract. Uses `raw_data` (each radius needs its
-# own panel build, via the corrected build_establishment_panel()).
+# own panel build via build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 02_figure_C2_alternative_treatment_radius.R: start ===")

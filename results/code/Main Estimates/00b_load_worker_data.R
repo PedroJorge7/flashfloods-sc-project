@@ -28,7 +28,7 @@ log_msg("Loaded worker panel: %d rows, %d columns, in %.1f sec (year range %d-%d
         nrow(dados_raw), ncol(dados_raw), as.numeric(difftime(Sys.time(), t0, units = "secs")),
         min(dados_raw$year, na.rm = TRUE), max(dados_raw$year, na.rm = TRUE))
 
-# [CORRECTED, 2nd pass] No pre-filter is applied here: the input already
+# No pre-filter is applied here: the input already
 # contains the 2007 baseline worker sample used for matching, and earlier
 # years must retain employment variation for the event-study specification.
 dados <- dados_raw

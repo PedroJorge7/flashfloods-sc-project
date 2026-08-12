@@ -4,7 +4,7 @@
 # The "treated" group here is the ordinary 50-80 km control ring, compared
 # against four far-away placebo "control" rings (200-240 km) where no true
 # effect should exist. Uses `raw_data` (each placebo ring needs its own
-# panel, via the corrected build_establishment_panel()).
+# panel via build_establishment_panel()).
 # ============================================================================
 
 log_msg("=== 09_figure_C9_placebo_test.R: start ===")

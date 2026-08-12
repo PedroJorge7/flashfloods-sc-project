@@ -30,8 +30,8 @@ output_empregados <- function(dados, min_treat, max_treat,
                                cluster_formula = ~ year + cpf) {
 
   if (expand_outcomes) {
-    stop("output_empregados() [New_Results, corrected]: expand_outcomes is not implemented ",
-         "in this corrected version (no Appendix script sets it).")
+    stop("output_empregados(): expand_outcomes is not implemented ",
+         "because no appendix script uses it.")
   }
 
   se_type <- match.arg(se_type, c("twoway", "cluster"))

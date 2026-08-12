@@ -9,7 +9,7 @@
 #   (3) High Skill workers, with trend (grau_instr >= 8 in 2007)
 #   (4) Low Skill workers, with trend (grau_instr < 8 in 2007)
 # Uses `dados_main` (2002-2012) from 00b_load_worker_data.R and the
-# corrected output_empregados() (fixed 2007 baseline treatment, no
+# output_empregados() (fixed 2007 baseline treatment, no
 # mover-year outcome nulling).
 # ============================================================================
 

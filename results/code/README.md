@@ -1,11 +1,7 @@
-# Corrected replication code
+# Replication code
 
-Corrected re-estimation of every table and figure in *Flash Floods, Business
+Code for reproducing every table and figure in *Flash Floods, Business
 Adjustment, and Ripple Effects on Displaced Workers* (Alves, Ehrl, and Lima).
-Treatment status is fixed once per unit from its 2007 baseline instead of
-being recomputed each year. Outcomes are retained when a unit's current-year
-distance falls outside the classifiable bands, for example after relocation
-or employment outside Santa Catarina.
 
 ## Folder structure
 
@@ -29,8 +25,8 @@ results/code/
     H_Robust_Confidence_Intervals/
 ```
 
-Appendix A (Municipal Balance) is retained in the complete runner but is
-unaffected by the panel correction. Appendix D consists of static maps.
+Appendix A contains the municipal balance analysis. Appendix D consists of
+static maps.
 
 Figure 5b (`Main Estimates/10_figure5b_event_study_workers_by_skill.R`) is an extra exhibit not in the manuscript — the worker event study split by High/Low Skill.
 
@@ -47,7 +43,8 @@ Rscript run_single_appendix_step.R "C_Establishment_Robustness/05_table_C5_alter
 
 ## Software requirements
 
-Same as `Code/`: R with `dplyr`, `tidyr`, `tibble`, `haven`, `fixest`, `broom`, `survival`, `MatchIt`, `HonestDiD`, `ggplot2`, `ggpubr`, and base `parallel` (wild cluster bootstrap in C.5).
+Package versions and transitive dependencies are recorded in the project-level
+`renv.lock`. From the project root, run `renv::restore()` before replication.
 
 ## Input data
 
@@ -59,4 +56,5 @@ Writes to `results/analysis/` (`tables/`, `figures/`, `cache/`, `logs/`).
 
 ## Note on C.6 / G.4 ("dropping movers")
 
-`Code/`'s original definition of a "mover" (treatment classification that switches across years) becomes a no-op once treatment is fixed at baseline. These two scripts use a redefinition instead: drop units ever observed with a current-year/job distance band opposite their baseline classification.
+These scripts drop units ever observed with a current-year or current-job
+distance band opposite their baseline classification.

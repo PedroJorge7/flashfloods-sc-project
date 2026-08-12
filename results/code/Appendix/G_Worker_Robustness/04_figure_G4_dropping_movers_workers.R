@@ -3,7 +3,7 @@
 # Estimates Dropping Units that Moved Across Areas
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract.
 # Employment outcome only, shown as a coefficient-by-period figure. Uses
-# `dados_main` (2002-2012) from 00b_load_worker_data.R and the corrected
+# `dados_main` (2002-2012) from 00b_load_worker_data.R and
 # output_empregados().
 # ============================================================================
 

@@ -56,7 +56,7 @@ build_establishment_panel <- function(raw_data, treated_rule, label,
                                        year_min = 2003, year_max = 2012,
                                        dummy_years = NULL) {
 
-  log_msg("Building establishment panel [CORRECTED, full life-of-firm]: %s (years %d-%d)", label, year_min, year_max)
+  log_msg("Building establishment panel: %s (years %d-%d)", label, year_min, year_max)
 
   if (is.null(dummy_years)) dummy_years <- year_min:year_max
 

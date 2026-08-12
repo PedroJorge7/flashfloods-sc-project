@@ -3,7 +3,7 @@
 # Estimates Dropping Units Affected by the 2011 Floods
 # Treatment: 0-5 km vs. 50-80 km control. Clustering: census tract. Drops
 # establishments located in the 11-municipality, 2011-specific ECP list
-# entirely. Depends on `main_panel` (already the corrected, full-life panel
+# entirely. Depends on `main_panel` (the full-life panel
 # from 00a_load_establishment_data.R).
 # ============================================================================
 
