@@ -56,39 +56,12 @@ provide a detailed representation of the disaster footprint. Distances from
 establishments to the mapped flood extent are then used to define the
 treatment and control rings.
 
-## From the national RAIS files to the analytical panels
+## Analytical panels
 
-The restricted microdata used in the analysis originate in the annual,
-nationwide files of the Relação Anual de Informações Sociais (RAIS). The raw
-RAIS records are first standardized across years, and the confidential
-establishment and worker identifiers are used to link observations over
-time. Establishment addresses are geocoded and spatially joined to the 2008
-SAR flood map. For every establishment, we calculate the distance from its
-pre-disaster 2007 location to the nearest mapped flooded area.
-
-The geographic restriction is imposed using the 2007 baseline, before the
-disaster and before outcomes are followed:
-establishments located no more than 5 km from a mapped flooded area form the
-treatment area, while establishments located between 50 and 80 km form the
-baseline control area. Establishments in the intervening 5--50 km band or
-beyond 80 km are not part of the baseline comparison. Once this baseline
-sample and treatment status have been defined, the confidential identifiers
-are used to recover the same establishments from the annual RAIS files and
-track them backward and forward over time. Thus, later outcomes do not cause
-an establishment to enter the treatment or control area; the spatial groups
-are anchored to the pre-disaster location. Outcomes remain observed after a
-unit relocates, including when its later location falls outside the original
-distance bands. The main establishment panel covers 2003--2012, and the
-extended analysis follows establishments through 2016.
-
-The worker panel is constructed from the linked employment records of these
-establishments. The baseline worker sample retains workers employed at the
-same establishment in 2006 and 2007 and follows their subsequent employment,
-earnings, and location in RAIS. Most worker analyses cover 2003--2012, while
-the extended specifications continue through 2016. These processing steps
-were carried out in the authorized secure environment; the repository begins
-with the resulting restricted analytical files because neither the national
-RAIS microdata nor the intermediate identified crosswalks can be released.
+The construction of the restricted establishment and worker panels, including
+the baseline sample rules and longitudinal linkage, is documented in
+`README.md`. This executable document begins with those analytical inputs and
+contains only the controls needed to run the replication scripts.
 
 # Directory structure
 

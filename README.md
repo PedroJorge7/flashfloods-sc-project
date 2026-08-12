@@ -64,9 +64,7 @@ Relocation equals one in year (t) when the establishment is observed in a differ
 
 ### 7. Worker sample and panel
 
-The worker panel is assembled from the employment relationships associated with establishments selected at baseline. CPF is then used to recover each selected worker's formal employment history in the national RAIS. Workers remain under observation when they obtain formal employment at another establishment or outside Santa Catarina.
-
-The current worker sample does not require employment at the same establishment in both 2006 and 2007. This earlier restriction was removed so that employment has genuine variation during the pre-treatment period. The public worker loader therefore uses the complete restricted worker input without applying the former `emprego_06_07` and `mesma_empresa_06_07` filter.
+The worker sample consists of workers with a formal employment relationship in 2007 at establishments selected at baseline. The 2007 restriction is required because the covariates used for propensity-score matching are measured in that year. CPF is then used to recover each selected worker's subsequent formal employment history in the national RAIS. Workers remain under observation when they obtain formal employment at another establishment or outside Santa Catarina.
 
 The main worker analysis focuses on workers formally employed on December 31, 2008, by establishments located in the treatment area that were present in the 2008 RAIS and absent from the 2009 RAIS. The control group contains observationally similar workers associated with establishments in the control area and is selected through nearest-neighbor propensity-score matching without replacement.
 
@@ -77,12 +75,6 @@ The restricted worker input expected by the replication code is:
 The public code constructs the worker-year panel, fixes treatment from the baseline employment relationship, performs propensity-score matching, and creates the employment and treatment variables used in estimation.
 
 The main worker outcome equals one when the worker has a formal employment relationship active on December 31 of year (t), and zero otherwise. A zero does not distinguish unemployment from informal employment because RAIS covers only formal employment.
-
-### 8. Deflating remuneration
-
-The replication uses the Extended National Consumer Price Index, IPCA, produced by the Brazilian Institute of Geography and Statistics, IBGE. The series in `indice.xlsx` uses 2017 as its base year.
-
-The worker code uses this index to deflate average remuneration, December remuneration, and hourly remuneration. Hourly remuneration is calculated by dividing average remuneration by contracted working hours.
 
 ## Repository structure
 
@@ -119,7 +111,6 @@ The principal inputs are:
 - `Natural Disastrer Santa Catarina - Dataset.dta`, the restricted establishment analytical panel derived from RAIS, geocoded establishment locations, and flood exposure measures;
 - `workers_clean_data.rds`, the restricted worker analytical panel derived from linked RAIS employment records;
 - `inundacao/inundacao_2008.shp` and its Shapefile sidecars, the third-party SAR-derived flood polygon layer;
-- `indice.xlsx`, the IPCA series used to deflate remuneration;
 - `municipal_balance_5km_nucleo.rds`, the municipal variables used in the municipal balance analysis;
 - `firm_coordinates.dta`, the establishment coordinates used by specifications with spatially robust standard errors.
 

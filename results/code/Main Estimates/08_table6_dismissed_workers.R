@@ -137,7 +137,7 @@ writeLines(lines, out_path_tex)
 log_msg("Saved table: %s", out_path_tex)
 
 # Tidy CSV companion.
-tab_trend <- gen_table(output_trend) %>% dplyr::select(-dplyr::any_of("log Wage"))
+tab_trend <- gen_table(output_trend)
 out_path_csv <- file.path(tables_dir, "Tab_06_Dismissed_Workers_5km_tract.csv")
 write.csv(tab_trend, out_path_csv, row.names = FALSE)
 log_msg("Saved table: %s", out_path_csv)

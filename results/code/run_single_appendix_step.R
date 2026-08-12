@@ -9,8 +9,7 @@
 # model from EVERY prior script in the SAME R session (nothing is ever
 # rm()'d between sourced scripts) -- which exhausted this machine's 7.7 GB
 # RAM during F.1's exposed-workers PSM (std::bad_alloc in MatchIt's C++
-# nearest-neighbor matcher) once the emprego_06_07 filter no longer bounds
-# the worker population.
+# nearest-neighbor matcher) when processing the full worker population.
 #
 # Usage: Rscript run_single_appendix_step.R <relative/path/to/script.R> [needs_00a]
 #   needs_00a: "1" to also source Main Estimates/00a (only H.1 needs this,

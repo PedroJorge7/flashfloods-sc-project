@@ -135,14 +135,6 @@ output_empregados <- function(dados, min_treat, max_treat,
     filter(year >= 2003 & year <= max(dados$year), year >= min_ano) %>%
     ungroup()
 
-  # Deflate wages using the price index (unchanged from the original).
-  indice <- readxl::read_excel(data_path("indice.xlsx")) %>% select(c(year = Data, indice))
-  dados4e <- left_join(dados4e, indice, by = "year")
-  dados4e$salario_hora          <- dados4e$rem_med_r / dados4e$horas_contr
-  dados4e$salario_hora_real     <- BETS::deflate(dados4e$salario_hora, dados4e$indice, type = 'index')
-  dados4e$rendimento_real       <- BETS::deflate(dados4e$rem_dez_r,    dados4e$indice, type = 'index')
-  dados4e$rendimento_medio_real <- BETS::deflate(dados4e$rem_med_r,    dados4e$indice, type = 'index')
-
   # ---------------------------------------------------------------------------
   # Step 3: treatment dummies, built from the FIXED baseline classification
   # (treat_base), not from that year's dist_flood.
@@ -191,74 +183,42 @@ output_empregados <- function(dados, min_treat, max_treat,
   }
 
   # ---------------------------------------------------------------------------
-  # Step 4: estimate employment and wage models.
+  # Step 4: estimate employment models.
   # ---------------------------------------------------------------------------
   if (trend) {
     reg1 <- run_worker_model(empregado ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract], data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf + pre_pos[code_tract], data = dados4, fixef_rm = "none")
-
-    output1 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output1 <- data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output1 <- rbind(output1,
-                     c("A - Employment (1/0)", 2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("B - Wage Value",       2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
+                     c("A - Employment (1/0)", 2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
     output1 <- output1 %>% arrange(Regression, parmseq) %>%
       mutate(estimate = as.numeric(estimate), min = as.numeric(min), max = as.numeric(max),
              parmseq = as.numeric(parmseq))
     output1$type <- 'event_study'
 
     reg1 <- run_worker_model(empregado ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ treat_B_agg | year + cpf + pre_pos[code_tract], data = dados4, fixef_rm = "none")
-
-    output2 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output2 <- data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output2$type <- 'type_treatment'
 
     reg1 <- run_worker_model(empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract], data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf + pre_pos[code_tract], data = dados4, fixef_rm = "none")
-
-    output3 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output3 <- data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output3$type <- 'type_treatment'
 
   } else {
     reg1 <- run_worker_model(empregado ~ i(year, treat_B, 2007) | year + cpf, data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ i(year, treat_B, 2007) | year + cpf, data = dados4, fixef_rm = "none")
-
-    output1 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg2)))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output1 <- data.frame(Regression = "A - Employment (1/0)", parmseq = as.numeric(gsub(".*::(\\d+):.*", "\\1", names(coef(reg1)))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output1 <- rbind(output1,
-                     c("A - Employment (1/0)", 2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)),
-                     c("B - Wage Value",       2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
+                     c("A - Employment (1/0)", 2007, 0, 0, 0, 0, 0, 0, paste0(min_treat, "-", max_treat), paste0(min_control, "-", max_control)))
     output1 <- output1 %>% arrange(Regression, parmseq) %>%
       mutate(estimate = as.numeric(estimate), min = as.numeric(min), max = as.numeric(max),
              parmseq = as.numeric(parmseq))
     output1$type <- 'event_study'
 
     reg1 <- run_worker_model(empregado ~ treat_B_agg | year + cpf, data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ treat_B_agg | year + cpf, data = dados4, fixef_rm = "none")
-
-    output2 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = "Flash Flood Post", estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output2 <- data.frame(Regression = "A - Employment (1/0)", parmseq = "Flash Flood Post", estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output2$type <- 'type_treatment'
 
     reg1 <- run_worker_model(empregado ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf, data = dados4)
-    reg2 <- run_worker_model(log(rendimento_medio_real) ~ treat_B_2008 + treat_B_2009 + treat_B_2010 + treat_B_2011 + treat_B_2012 + treat_B_2013 + treat_B_2014 + treat_B_2015 + treat_B_2016 | year + cpf, data = dados4, fixef_rm = "none")
-
-    output3 <- rbind(
-      data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control)),
-      data.frame(Regression = "B - Wage Value",       parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg2))), estimate = coef(reg2), se = reg2$se, min = coef(reg2) - 1.96 * reg2$se, max = coef(reg2) + 1.96 * reg2$se, p.value = broom::tidy(reg2)$p.value, nobs = reg2$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
-    )
+    output3 <- data.frame(Regression = "A - Employment (1/0)", parmseq = gsub("treat_B_", "Flash Flood ", names(coef(reg1))), estimate = coef(reg1), se = reg1$se, min = coef(reg1) - 1.96 * reg1$se, max = coef(reg1) + 1.96 * reg1$se, p.value = broom::tidy(reg1)$p.value, nobs = reg1$nobs, treat = paste0(min_treat, "-", max_treat), control = paste0(min_control, "-", max_control))
     output3$type <- 'type_treatment'
   }
 
@@ -297,8 +257,8 @@ gen_table <- function(df) {
 
   table <- do.call(rbind, lapply(1:nrow(table), function(i) {
     rbind(
-      data.frame(term = table$term[i], Employment = table$`Coef_A - Employment (1/0)`[i], `log Wage` = table$`Coef_B - Wage Value`[i], stringsAsFactors = FALSE),
-      data.frame(term = "",            Employment = table$`std.error_A - Employment (1/0)`[i], `log Wage` = table$`std.error_B - Wage Value`[i], stringsAsFactors = FALSE)
+      data.frame(term = table$term[i], Employment = table$`Coef_A - Employment (1/0)`[i], stringsAsFactors = FALSE),
+      data.frame(term = "",            Employment = table$`std.error_A - Employment (1/0)`[i], stringsAsFactors = FALSE)
     )
   }))
 
